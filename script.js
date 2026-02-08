@@ -5,10 +5,8 @@ const donate = document.getElementById('donate');
 let taps = 0;
 let misses = 0;
 
-// Punkt bewegen + Treffer zählen
-function moveDot(event) {
-  event.stopPropagation(); // verhindert Fehlklick-Zählung
-
+// Punkt bewegen
+function moveDot() {
   const padding = 10;
 
   const donateWidth = donate.offsetWidth + 20;
@@ -22,17 +20,26 @@ function moveDot(event) {
 
   dot.style.left = newX + 'px';
   dot.style.top = newY + 'px';
-
-  taps++;
-  counter.textContent = 'Taps: ' + taps;
 }
 
-// Klick / Touch auf Punkt
-dot.addEventListener('click', moveDot);
-dot.addEventListener('touchstart', moveDot);
+// Treffer
+function hitDot() {
+  taps++;
+  counter.textContent = 'Taps: ' + taps;
+  moveDot();
+}
 
-// Fehlklick zählen (Hintergrund)
-function registerMiss() {
+// Alles prüfen (Treffer / Fehlklick)
+function handleTap(event) {
+  const target = event.target;
+
+  if (target === dot) {
+    hitDot();
+    return;
+  }
+
+  if (target === donate) return;
+
   misses++;
 
   if (misses >= 5) {
@@ -42,6 +49,10 @@ function registerMiss() {
   }
 }
 
-// Klick / Touch auf Hintergrund
-document.body.addEventListener('click', registerMiss);
-document.body.addEventListener('touchstart', registerMiss);
+// Nur EIN Event registrieren (keine Doppelzählung!)
+const isTouchDevice = 'ontouchstart' in window;
+
+document.addEventListener(
+  isTouchDevice ? 'touchstart' : 'click',
+  handleTap
+);
