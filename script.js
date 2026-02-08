@@ -8,7 +8,6 @@ let misses = 0;
 // Punkt bewegen
 function moveDot() {
   const padding = 10;
-
   const donateWidth = donate.offsetWidth + 20;
   const donateHeight = donate.offsetHeight + 20;
 
@@ -29,7 +28,7 @@ function hitDot() {
   moveDot();
 }
 
-// Alles prüfen (Treffer / Fehlklick)
+// Klick/Touch-Handler
 function handleTap(event) {
   const target = event.target;
 
@@ -40,21 +39,30 @@ function handleTap(event) {
 
   if (target === donate) return;
 
+  // Fehlklick
   misses++;
 
   if (misses >= 5) {
-    // Reset Zähler
     taps = 0;
     misses = 0;
     counter.textContent = 'Taps: 0';
 
-    
+    // Punkt wieder mittig setzen (innerhalb erlaubtem Bereich)
+    const padding = 10;
+    const donateWidth = donate.offsetWidth + 20;
+    const donateHeight = donate.offsetHeight + 20;
+
+    const centerX = Math.min(window.innerWidth / 2 - dot.offsetWidth / 2, window.innerWidth - dot.offsetWidth - donateWidth - padding);
+    const centerY = Math.min(window.innerHeight / 2 - dot.offsetHeight / 2, window.innerHeight - dot.offsetHeight - donateHeight - padding);
+
+    dot.style.left = centerX + 'px';
+    dot.style.top = centerY + 'px';
+  }
 }
 
-// Nur EIN Event registrieren (keine Doppelzählung!)
+// Desktop + Mobile Events
 const isTouchDevice = 'ontouchstart' in window;
+document.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleTap);
 
-document.addEventListener(
-  isTouchDevice ? 'touchstart' : 'click',
-  handleTap
-);
+// Punkt beim Laden initial positionieren
+window.addEventListener('load', moveDot);
