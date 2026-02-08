@@ -13,21 +13,17 @@ const dotSize = 50;  // Größe des Punktes
 const padding = 10;  // Abstand zu Rändern
 
 // Teleport-Funktion
-function teleportDot() {
-    const buttonHeight = supportButton.offsetHeight + 20; 
-    const padding = 10;
-    const dotSize = 50;
-
-    const maxX = window.innerWidth - dotSize - padding;
-    const maxY = window.innerHeight - dotSize - padding - buttonHeight;
-
-    const randomX = Math.random() * maxX;
-    const randomY = Math.random() * maxY;
-
-    dot.style.left = `${randomX}px`;
-    dot.style.top = `${randomY}px`;
-
+function moveDot() {
+  const maxX = window.innerWidth - dot.offsetWidth;
+  const maxY = window.innerHeight - dot.offsetHeight;
+  const newX = Math.random() * maxX;
+  const newY = Math.random() * maxY;
+  dot.style.left = newX + 'px';
+  dot.style.top = newY + 'px';
+  taps++;
+  counter.textContent = 'Taps: ' + taps;
 }
+
 
 // Klick auf Punkt → Zähler erhöhen + Punkt teleportieren
 dot.addEventListener('click', () => {
