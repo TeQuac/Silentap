@@ -1,22 +1,16 @@
-const dot = document.getElementById("dot");
-const counter = document.getElementById("counter");
+const dot = document.getElementById('dot');
+const counter = document.getElementById('counter');
 let taps = 0;
 
 function moveDot() {
-  const maxX = window.innerWidth - 60;
-  const maxY = window.innerHeight - 60;
-
-  const x = Math.random() * maxX;
-  const y = Math.random() * maxY;
-
-  dot.style.left = x + "px";
-  dot.style.top = y + "px";
-
+  const maxX = window.innerWidth - dot.offsetWidth;
+  const maxY = window.innerHeight - dot.offsetHeight;
+  const newX = Math.random() * maxX;
+  const newY = Math.random() * maxY;
+  dot.style.left = newX + 'px';
+  dot.style.top = newY + 'px';
   taps++;
-  counter.textContent = taps;
+  counter.textContent = 'Taps: ' + taps;
 }
 
-dot.addEventListener("click", moveDot);
-dot.addEventListener("touchstart", moveDot);
-
-moveDot();
+dot.addEventListener('click', moveDot);
