@@ -1,16 +1,29 @@
 const dot = document.getElementById('dot');
-const counter = document.getElementById('counter');
-let taps = 0;
+const supportButton = document.getElementById('supportButton'); // Dein Support-Button
+const dotSize = 50; // Größe des Punktes in px (wie im CSS definiert)
 
-function moveDot() {
-  const maxX = window.innerWidth - dot.offsetWidth;
-  const maxY = window.innerHeight - dot.offsetHeight;
-  const newX = Math.random() * maxX;
-  const newY = Math.random() * maxY;
-  dot.style.left = newX + 'px';
-  dot.style.top = newY + 'px';
-  taps++;
-  counter.textContent = 'Taps: ' + taps;
+// Teleport-Funktion
+function teleportDot() {
+    const padding = 10; // Abstand zum Rand
+    const buttonHeight = supportButton.offsetHeight + 20; // Abstand über Support-Button
+
+    // Begrenzung des Bereichs, in dem der Punkt erscheinen darf
+    const maxX = window.innerWidth - dotSize - padding;
+    const maxY = window.innerHeight - dotSize - padding - buttonHeight;
+    const minX = padding;
+    const minY = padding;
+
+    // Zufällige Position innerhalb der Grenzen
+    const randomX = Math.floor(Math.random() * (maxX - minX) + minX);
+    const randomY = Math.floor(Math.random() * (maxY - minY) + minY);
+
+    dot.style.left = randomX + "px";
+    dot.style.top = randomY + "px";
 }
 
-dot.addEventListener('click', moveDot);
+// Beispiel: Klick auf Punkt
+dot.addEventListener('click', () => {
+    teleportDot();
+    counter++; // Zähler wie bisher
+    document.getElementById('counter').innerText = counter;
+});
