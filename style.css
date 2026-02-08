@@ -20,6 +20,7 @@ body {
   left: 50%;
   cursor: pointer;
   transition: top 0.2s ease, left 0.2s ease;
+  z-index: 10; /* Punkt liegt immer über allem */
 }
 
 #counter {
@@ -28,6 +29,7 @@ body {
     left: 10px;
     font-size: 18px;
     color: #333;
+    z-index: 5;
 }
 
 #donate {
@@ -40,6 +42,7 @@ body {
   border-radius: 8px;
   text-decoration: none;
   opacity: 0.8;
+  z-index: 5; /* unter dem Punkt */
 }
 
 #donate:hover {
