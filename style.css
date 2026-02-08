@@ -1,11 +1,16 @@
+/* ----------------------------
+   Silentap - Styles
+---------------------------- */
+
 body {
     margin: 0;
     padding: 0;
     background-color: #f8f8f8;
     font-family: Arial, sans-serif;
     overflow: hidden;
-    height: 100vh;    /* macht die gesamte Fläche klickbar */
-    width: 100vw;
+
+    height: 100vh;        /* NEU */
+    width: 100vw;         /* NEU */
 }
 
 #dot {
@@ -18,7 +23,7 @@ body {
   left: 50%;
   cursor: pointer;
   transition: top 0.2s ease, left 0.2s ease;
-  z-index: 10; /* Punkt liegt über allem */
+  z-index: 10;
 }
 
 #counter {
@@ -40,7 +45,7 @@ body {
   border-radius: 8px;
   text-decoration: none;
   opacity: 0.8;
-  z-index: 5; /* unter Punkt */
+  z-index: 5;
 }
 
 #donate:hover {
