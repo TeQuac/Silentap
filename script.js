@@ -28,7 +28,7 @@ function hitDot() {
   moveDot();
 }
 
-// Fehlklick Reset
+// Fehlklick
 function checkMiss() {
   misses++;
   if (misses >= 5) {
@@ -36,7 +36,7 @@ function checkMiss() {
     misses = 0;
     counter.textContent = 'Taps: 0';
 
-    // Punkt wieder mittig setzen
+    // Punkt wieder mittig
     const padding = 10;
     const donateWidth = donate.offsetWidth + 20;
     const donateHeight = donate.offsetHeight + 20;
@@ -54,13 +54,15 @@ function checkMiss() {
 dot.addEventListener('click', hitDot);
 dot.addEventListener('touchstart', hitDot);
 
-// Hintergrund Fehlklick (weiß + ignoriert Donate)
-document.body.addEventListener('click', (e) => {
-  if (e.target !== dot && e.target !== donate) checkMiss();
-});
-document.body.addEventListener('touchstart', (e) => {
-  if (e.target !== dot && e.target !== donate) checkMiss();
-});
+// Hintergrund Fehlklick (weiß) – nur zählen, wenn nicht Punkt oder Donate
+function handleBackgroundClick(event) {
+  if (event.target !== dot && event.target !== donate) {
+    checkMiss();
+  }
+}
+
+document.body.addEventListener('click', handleBackgroundClick);
+document.body.addEventListener('touchstart', handleBackgroundClick);
 
 // Initialposition beim Laden
 window.addEventListener('load', moveDot);
