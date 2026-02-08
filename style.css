@@ -1,37 +1,42 @@
 body {
+  background-color: #FAFAFA;
   margin: 0;
-  background: linear-gradient(to bottom, #FCFCFC, #F2F2F2);
-  overflow: hidden;
   font-family: sans-serif;
 }
 
 #dot {
-  width: 60px;
-  height: 60px;
-  background: black;
+  width: 50px;
+  height: 50px;
+  background-color: #000;
   border-radius: 50%;
   position: absolute;
-  touch-action: manipulation;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: top 0.2s ease, left 0.2s ease;
 }
 
 #counter {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 10px;
+  left: 10px;
+  color: #333;
   font-size: 18px;
-  color: #666;
-  user-select: none;
 }
 
 #donate {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #666;
+  bottom: 10px;
+  right: 10px;
+  background: #555;
   color: white;
-  padding: 8px 12px;
+  padding: 10px;
   border-radius: 8px;
   text-decoration: none;
-  font-size: 14px;
-  opacity: 0.7;
+  opacity: 0.8;
+}
+
+#donate:hover {
+  opacity: 1;
 }
