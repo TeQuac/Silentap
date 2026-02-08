@@ -1,13 +1,13 @@
 {
   "name": "Quiet Dot",
-  "short_name": "Quiet Dot",
-  "start_url": "./index.html",
+  "short_name": "QuietDot",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#FCFCFC",
-  "theme_color": "#FCFCFC",
+  "background_color": "#FAFAFA",
+  "theme_color": "#555",
   "icons": [
     {
-      "src": "https://i.imgur.com/Bk2ai1h.png",
+      "src": "qr-code.png",
       "sizes": "192x192",
       "type": "image/png"
     }
