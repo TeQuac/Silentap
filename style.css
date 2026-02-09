@@ -13,8 +13,8 @@ index ee6d3cd43b73ba233c903b300ae21ab9acde7081..480f897fd218f1875909efcb2eaf8312
      background-color: #f8f8f8;
      font-family: Arial, sans-serif;
      overflow: hidden;
-+    touch-action: none;
-+    -webkit-text-size-adjust: 100%;
+    touch-action: none;
+    -webkit-text-size-adjust: 100%;
  
      height: 100vh;        /* NEU */
      width: 100vw;         /* NEU */
@@ -66,15 +66,15 @@ index ee6d3cd43b73ba233c903b300ae21ab9acde7081..480f897fd218f1875909efcb2eaf8312
      z-index: 5;
  }
  
-+#misses {
-+  position: fixed;
-+  top: 10px;
-+  right: 10px;
-+  font-size: 18px;
-+  color: #333;
-+  z-index: 5;
-+}
-+
+#misses {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  font-size: 18px;
+  color: #333;
+  z-index: 5;
+}
+
  #donate {
    position: fixed;
    bottom: 10px;
