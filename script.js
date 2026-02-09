@@ -1,11 +1,12 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/script.js b/script.js
-index 07ce0ec403f3e8999aea890d435f04879f140611..4bd68a341ff6b075381e8962436c78bb7c219f7f 100644
+index 07ce0ec403f3e8999aea890d435f04879f140611..d9f8a5e9a7cfacaa91b68259b140f0c4ab1ec8f1 100644
 --- a/script.js
 +++ b/script.js
-@@ -1,135 +1,211 @@
+@@ -1,135 +1,227 @@
  const dot = document.getElementById('dot');
  const counter = document.getElementById('counter');
-const missesDisplay = document.getElementById('misses');
+let missesDisplay = document.getElementById('misses');
  const donate = document.getElementById('donate');
  const startButton = document.getElementById('start-button');
  
@@ -13,8 +14,20 @@ const missesDisplay = document.getElementById('misses');
  let misses = 0;
  let gameActive = false;
 const maxMisses = 2;
-const gameElements = [dot, counter, missesDisplay, donate];
-const avoidElements = [counter, missesDisplay, donate];
+function ensureMissesDisplay() {
+  if (missesDisplay) return missesDisplay;
+  const created = document.createElement('div');
+  created.id = 'misses';
+  created.textContent = `Misses: 0/${maxMisses}`;
+  document.body.appendChild(created);
+  missesDisplay = created;
+  return created;
+}
+
+ensureMissesDisplay();
+
+const gameElements = [dot, counter, missesDisplay, donate].filter(Boolean);
+const avoidElements = [counter, missesDisplay, donate].filter(Boolean);
 let movementAnimation = null;
 let movementState = null;
  
@@ -55,8 +68,8 @@ function startMovement(previousPosition, nextPosition) {
     velocity: 0.4,
     direction: {
       x: directionX / length,
-      y: directionY / length
-    }
+     y: directionY / length
+   }
   };
 
   const padding = 10;
@@ -209,8 +222,16 @@ function startMovement(previousPosition, nextPosition) {
    }
  });
  
- startButton.addEventListener('click', () => {
++const startGame = (event) => {
++  event.preventDefault();
    setGameActive(true);
- });
+
+};
+
+startButton.addEventListener('click', startGame);
+startButton.addEventListener('touchstart', startGame, { passive: false });
  
  setGameActive(false);
+ 
+EOF
+)
