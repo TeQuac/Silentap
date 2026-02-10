@@ -14,7 +14,26 @@
 </head>
 <body>
 
-  <button id="start-button" type="button">Start</button>
+  <div id="start-screen">
+    <div id="start-header">
+      <div id="user-display" class="hidden">
+        <div id="username-label">User: <span id="username-value"></span></div>
+        <div id="user-highscore">Highscore: <span id="user-highscore-value">0</span></div>
+      </div>
+      <form id="username-form" class="hidden">
+        <label for="username-input">Choose a username</label>
+        <div class="username-row">
+          <input id="username-input" type="text" autocomplete="off" minlength="3" maxlength="16" placeholder="Min. 3 Zeichen" required>
+          <button id="username-save" type="submit">Save</button>
+        </div>
+        <div id="username-error" class="hidden"></div>
+      </form>
+    </div>
+    <button id="start-button" type="button">Start</button>
+    <div id="highscore-ticker" aria-label="Top 10 Highscores">
+      <div id="highscore-track"></div>
+    </div>
+  </div>
   <div id="dot" class="hidden" hidden></div>
   <div id="counter" class="hidden" hidden>Taps: 0</div>
   <div id="misses" class="hidden" hidden>Misses: 0/2</div>
@@ -23,3 +42,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
