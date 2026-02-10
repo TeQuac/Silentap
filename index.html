@@ -4,42 +4,42 @@
   <meta charset="UTF-8">
   <title>Silentap</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
-  <!-- Manifest für PWA -->
-  <!-- App Icon -->
+
   <link rel="apple-touch-icon" href="https://i.imgur.com/Bk2ai1h.png">
   <link rel="manifest" href="manifest.json">
-
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="username-overlay" class="overlay hidden" aria-live="polite">
+    <form id="username-form" class="card" novalidate>
+      <h2>Willkommen bei Silentap</h2>
+      <p>Wähle einmalig deinen Usernamen (mind. 3 Zeichen).</p>
+      <label for="username-input">Username</label>
+      <input id="username-input" type="text" autocomplete="off" minlength="3" maxlength="16" placeholder="Min. 3 Zeichen" required>
+      <button id="username-save" type="submit">Speichern</button>
+      <div id="username-error" class="hidden" role="alert"></div>
+    </form>
+  </div>
 
-  <div id="start-screen">
-    <div id="start-header">
-      <div id="user-display" class="hidden">
-        <div id="username-label">User: <span id="username-value"></span></div>
-        <div id="user-highscore">Highscore: <span id="user-highscore-value">0</span></div>
-      </div>
-      <form id="username-form" class="hidden">
-        <label for="username-input">Choose a username</label>
-        <div class="username-row">
-          <input id="username-input" type="text" autocomplete="off" minlength="3" maxlength="16" placeholder="Min. 3 Zeichen" required>
-          <button id="username-save" type="submit">Save</button>
-        </div>
-        <div id="username-error" class="hidden"></div>
-      </form>
-    </div>
+  <div id="start-screen" class="hidden">
+    <header id="start-header">
+      <div id="username-label">User: <span id="username-value"></span></div>
+      <div id="user-highscore">Highscore: <span id="user-highscore-value">0</span></div>
+    </header>
+
     <button id="start-button" type="button">Start</button>
+
     <div id="highscore-ticker" aria-label="Top 10 Highscores">
       <div id="highscore-track"></div>
     </div>
   </div>
+
   <div id="dot" class="hidden" hidden></div>
   <div id="counter" class="hidden" hidden>Taps: 0</div>
+  <div id="game-highscore" class="hidden" hidden>Highscore: 0</div>
   <div id="misses" class="hidden" hidden>Misses: 0/2</div>
   <a href="https://www.paypal.com/ncp/payment/WT9NVQHGSA6TU" target="_blank" rel="noopener noreferrer" id="donate" class="hidden" hidden>☕️ Support</a>
 
   <script src="script.js"></script>
 </body>
 </html>
-
