@@ -6,15 +6,51 @@ const { Pool } = require('pg');
 const PORT = process.env.PORT || 8000;
 const ROOT = __dirname;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  host: process.env.PGHOST || 'dpg-d65gom15pdvs73da10ig-a',
-  port: Number(process.env.PGPORT || 5432),
-  database: process.env.PGDATABASE || 'silentap',
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false }
-});
+function resolveSslConfig(connectionString) {
+  if (process.env.PGSSL === 'disable') return false;
+  if (process.env.PGSSL === 'require') return { rejectUnauthorized: false };
+
+  if (!connectionString) return false;
+
+  try {
+    const parsed = new URL(connectionString);
+    const host = parsed.hostname || '';
+    const sslMode = parsed.searchParams.get('sslmode');
+
+    if (sslMode === 'disable') return false;
+    if (sslMode === 'require') return { rejectUnauthorized: false };
+
+    return host.endsWith('.render.com') ? { rejectUnauthorized: false } : false;
+  } catch {
+    return false;
+  }
+}
+
+function createPool() {
+  const connectionString =
+    process.env.DATABASE_URL ||
+    process.env.INTERNAL_DATABASE_URL ||
+    process.env.EXTERNAL_DATABASE_URL ||
+    null;
+
+  if (connectionString) {
+    return new Pool({
+      connectionString,
+      ssl: resolveSslConfig(connectionString)
+    });
+  }
+
+  return new Pool({
+    host: process.env.PGHOST || 'dpg-d65gom15pdvs73da10ig-a',
+    port: Number(process.env.PGPORT || 5432),
+    database: process.env.PGDATABASE || 'silentap',
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    ssl: resolveSslConfig(null)
+  });
+}
+
+const pool = createPool();
 
 async function ensureSchema() {
   await pool.query(`
@@ -127,7 +163,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 201, { user: inserted.rows[0] });
       return;
     } catch {
-      sendJson(res, 400, { error: 'Ungültige Anfrage.' });
+      sendJson(res, 500, { error: 'Datenbankfehler beim Erstellen des Users.' });
       return;
     }
   }
@@ -177,7 +213,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { user: result.rows[0] });
       return;
     } catch {
-      sendJson(res, 400, { error: 'Ungültige Anfrage.' });
+      sendJson(res, 500, { error: 'Datenbankfehler beim Aktualisieren des Highscores.' });
       return;
     }
   }
@@ -199,6 +235,6 @@ ensureSchema()
     });
   })
   .catch((error) => {
-    console.error('Failed to initialize database schema:', error.message);
+    console.error('Failed to initialize database schema:', error);
     process.exit(1);
   });
