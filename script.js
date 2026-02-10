@@ -16,7 +16,6 @@ const userHighscoreValue = document.getElementById('user-highscore-value');
 const highscoreTrack = document.getElementById('highscore-track');
 
 const storageKeys = {
-  users: 'silentapUsers',
   currentUser: 'silentapCurrentUser'
 };
 
@@ -31,62 +30,92 @@ let movementState = null;
 const gameElements = [dot, counter, gameHighscore, missesDisplay, donate].filter(Boolean);
 const avoidElements = [counter, gameHighscore, missesDisplay, donate].filter(Boolean);
 
-function loadUsers() {
-  const stored = localStorage.getItem(storageKeys.users);
-  if (!stored) return [];
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options
+  });
+
+  const isJson = response.headers.get('content-type')?.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const error = new Error(payload?.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
+}
+
+async function getTopUsers() {
+  const result = await fetchJson('/api/users/top');
+  return Array.isArray(result.users) ? result.users : [];
+}
+
+async function getUserRecord(name) {
+  const result = await fetchJson(`/api/users/${encodeURIComponent(name)}`);
+  return result.user;
+}
+
+async function createUser(name) {
+  const result = await fetchJson('/api/users', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  });
+  return result.user;
+}
+
+async function updateUserHighscore(name, highscore) {
+  const result = await fetchJson(`/api/users/${encodeURIComponent(name)}/highscore`, {
+    method: 'PATCH',
+    body: JSON.stringify({ highscore })
+  });
+  return result.user;
+}
+
+async function updateTicker() {
   try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
+    const topTen = await getTopUsers();
+
+    if (topTen.length === 0) {
+      highscoreTrack.textContent = 'Noch keine Highscores';
+      return;
+    }
+
+    const text = topTen
+      .map((entry, index) => `${index + 1}. ${entry.name} - ${entry.highscore}`)
+      .join(' • ');
+
+    highscoreTrack.textContent = `${text} • ${text}`;
   } catch {
-    return [];
+    highscoreTrack.textContent = 'Top-10 aktuell nicht erreichbar';
   }
 }
 
-function saveUsers(users) {
-  localStorage.setItem(storageKeys.users, JSON.stringify(users));
+function setCurrentUser(user) {
+  currentUser = user.name;
+  localStorage.setItem(storageKeys.currentUser, user.name);
+
+  usernameValue.textContent = user.name;
+  userHighscoreValue.textContent = String(user.highscore);
+  gameHighscore.textContent = `Highscore: ${user.highscore}`;
 }
 
-function getUserRecord(name) {
-  return loadUsers().find((user) => user.name === name) || null;
-}
-
-function updateTicker() {
-  const topTen = loadUsers()
-    .slice()
-    .sort((a, b) => b.highscore - a.highscore)
-    .slice(0, 10);
-
-  if (topTen.length === 0) {
-    highscoreTrack.textContent = 'Noch keine Highscores';
-    return;
-  }
-
-  const text = topTen.map((entry, index) => `${index + 1}. ${entry.name} - ${entry.highscore}`).join(' • ');
-  highscoreTrack.textContent = `${text} • ${text}`;
-}
-
-function setCurrentUser(name) {
-  currentUser = name;
-  localStorage.setItem(storageKeys.currentUser, name);
-  const record = getUserRecord(name);
-  if (!record) return;
-
-  usernameValue.textContent = record.name;
-  userHighscoreValue.textContent = String(record.highscore);
-  gameHighscore.textContent = `Highscore: ${record.highscore}`;
-}
-
-function updateCurrentUserHighscore(newScore) {
+async function updateCurrentUserHighscore(newScore) {
   if (!currentUser) return;
-  const users = loadUsers();
-  const record = users.find((user) => user.name === currentUser);
-  if (!record || newScore <= record.highscore) return;
 
-  record.highscore = newScore;
-  saveUsers(users);
-  userHighscoreValue.textContent = String(record.highscore);
-  gameHighscore.textContent = `Highscore: ${record.highscore}`;
-  updateTicker();
+  const currentShownHighscore = Number(userHighscoreValue.textContent || '0');
+  if (newScore <= currentShownHighscore) return;
+
+  try {
+    const updatedUser = await updateUserHighscore(currentUser, newScore);
+    userHighscoreValue.textContent = String(updatedUser.highscore);
+    gameHighscore.textContent = `Highscore: ${updatedUser.highscore}`;
+    await updateTicker();
+  } catch {
+    // Ignore network/database errors during gameplay
+  }
 }
 
 function showStartMenu() {
@@ -99,6 +128,7 @@ function showUsernameOverlay(message = '') {
   startScreen.classList.add('hidden');
   usernameOverlay.classList.remove('hidden');
   usernameInput.value = '';
+
   if (message) {
     usernameError.textContent = message;
     usernameError.classList.remove('hidden');
@@ -106,11 +136,12 @@ function showUsernameOverlay(message = '') {
     usernameError.textContent = '';
     usernameError.classList.add('hidden');
   }
+
   startButton.disabled = true;
 }
 
-function initUserFlow() {
-  updateTicker();
+async function initUserFlow() {
+  await updateTicker();
   const savedUser = localStorage.getItem(storageKeys.currentUser);
 
   if (!savedUser) {
@@ -118,14 +149,13 @@ function initUserFlow() {
     return;
   }
 
-  const record = getUserRecord(savedUser);
-  if (!record) {
+  try {
+    const user = await getUserRecord(savedUser);
+    setCurrentUser(user);
+    showStartMenu();
+  } catch {
     showUsernameOverlay('Gespeicherter User wurde nicht gefunden. Bitte neu wählen.');
-    return;
   }
-
-  setCurrentUser(record.name);
-  showStartMenu();
 }
 
 function setGameActive(active) {
@@ -134,6 +164,7 @@ function setGameActive(active) {
     element.classList.toggle('hidden', !active);
     element.hidden = !active;
   });
+
   startScreen.classList.toggle('hidden', active);
 
   if (active) {
@@ -240,6 +271,7 @@ function moveDot() {
     const overlapsAvoid = avoidRects.some((rect) => overlapsRect(dotRect, rect));
     newX = candidateX;
     newY = candidateY;
+
     if (!overlapsAvoid) break;
   }
 
@@ -261,10 +293,12 @@ function resetDot() {
   const centeredPosition = getCenteredPosition();
   dot.style.left = centeredPosition.left;
   dot.style.top = centeredPosition.top;
+
   if (movementAnimation) {
     cancelAnimationFrame(movementAnimation);
     movementAnimation = null;
   }
+
   movementState = null;
 }
 
@@ -319,7 +353,7 @@ startButton.addEventListener('touchstart', (event) => {
   setGameActive(true);
 }, { passive: false });
 
-usernameForm.addEventListener('submit', (event) => {
+usernameForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const name = usernameInput.value.trim();
 
@@ -328,17 +362,19 @@ usernameForm.addEventListener('submit', (event) => {
     return;
   }
 
-  const users = loadUsers();
-  if (users.some((user) => user.name.toLowerCase() === name.toLowerCase())) {
-    showUsernameOverlay('Dieser Username ist bereits vergeben.');
-    return;
-  }
+  try {
+    const user = await createUser(name);
+    setCurrentUser(user);
+    await updateTicker();
+    showStartMenu();
+  } catch (error) {
+    if (error.status === 409) {
+      showUsernameOverlay('Dieser Username ist bereits vergeben.');
+      return;
+    }
 
-  users.push({ name, highscore: 0 });
-  saveUsers(users);
-  setCurrentUser(name);
-  updateTicker();
-  showStartMenu();
+    showUsernameOverlay('Datenbank nicht erreichbar. Bitte später erneut versuchen.');
+  }
 });
 
 setGameActive(false);
