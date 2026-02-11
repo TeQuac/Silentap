@@ -456,15 +456,15 @@ a {
 .hint-row.success .hint-touch.left,
 .hint-row.success .hint-touch.right,
 .hint-row.fail .hint-touch.left {
-  animation: hintTouchPulse 1.8s ease-in-out infinite;
+  animation: hintTouchPulse 2.2s ease-in-out infinite;
 }
 
 .hint-row.success .hint-touch.right {
-  animation-delay: 0.12s;
+  animation-delay: 1.05s;
 }
 
 .hint-row.fail .hint-touch.left {
-  animation-delay: 0.2s;
+  animation-delay: 1s;
 }
 
 .hint-row.success .hint-lane {
@@ -473,6 +473,42 @@ a {
 
 .hint-row.fail .hint-lane {
   border-color: #f1d2d2;
+}
+
+
+
+.hint-step {
+  position: absolute;
+  top: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2f6db0;
+  opacity: 0;
+}
+
+.hint-step.first {
+  left: calc(25% - 9px);
+  animation: hintStepFlash 2.2s ease-in-out infinite;
+}
+
+.hint-step.second {
+  left: calc(75% - 9px);
+  animation: hintStepFlash 2.2s ease-in-out infinite;
+  animation-delay: 1.05s;
+}
+
+.hint-step.repeat {
+  left: calc(25% + 16px);
+  background: #d07a22;
+  animation: hintStepFlash 2.2s ease-in-out infinite;
+  animation-delay: 1s;
 }
 
 #split-hint-close {
@@ -487,16 +523,31 @@ a {
 }
 
 @keyframes hintTouchPulse {
-  0%, 40% {
+  0%, 30% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.6);
   }
-  55% {
+  42% {
     opacity: 0.95;
     transform: translate(-50%, -50%) scale(1);
   }
-  100% {
+  58%, 100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(1.35);
+  }
+}
+
+@keyframes hintStepFlash {
+  0%, 30% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  40%, 58% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }

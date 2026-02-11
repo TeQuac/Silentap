@@ -74,6 +74,7 @@ let currentUser = null;
 let userCache = [];
 let currentMode = 'normal';
 let authMode = 'register';
+let splitSequenceFirstDot = null;
 
 const movementAnimations = new Map();
 const movementStates = new Map();
@@ -522,6 +523,7 @@ function getDotsForMode() {
 
 function setGameActive(active) {
   gameActive = active;
+  splitSequenceFirstDot = null;
 
   alwaysVisibleInGame.forEach((element) => {
     element.classList.toggle('hidden', !active);
@@ -785,10 +787,33 @@ function handleTap(event) {
   if (isControlButton) return;
 
   const interactionPoints = getInteractionPoints(event);
-  const tappedDot = getDotsForMode().every((dotElement) => interactionPoints.some((point) => isTapInsideDot(dotElement, point)));
-  if (tappedDot) {
-    hitDot();
-    return;
+
+  if (currentMode === 'split') {
+    const leftHit = interactionPoints.some((point) => isTapInsideDot(dot, point));
+    const rightHit = interactionPoints.some((point) => isTapInsideDot(dotSplit, point));
+
+    if (leftHit && rightHit) {
+      splitSequenceFirstDot = null;
+    } else if (leftHit || rightHit) {
+      const tappedSide = leftHit ? 'left' : 'right';
+
+      if (!splitSequenceFirstDot) {
+        splitSequenceFirstDot = tappedSide;
+        return;
+      }
+
+      if (splitSequenceFirstDot !== tappedSide) {
+        splitSequenceFirstDot = null;
+        hitDot();
+        return;
+      }
+    }
+  } else {
+    const tappedDot = interactionPoints.some((point) => isTapInsideDot(dot, point));
+    if (tappedDot) {
+      hitDot();
+      return;
+    }
   }
 
   misses++;
@@ -797,6 +822,7 @@ function handleTap(event) {
   if (misses >= maxMisses) {
     taps = 0;
     misses = 0;
+    splitSequenceFirstDot = null;
     counter.textContent = 'Taps: 0';
     missesDisplay.textContent = `Misses: 0/${maxMisses}`;
     resetDotColors();
