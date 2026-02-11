@@ -618,6 +618,15 @@ function applyMode(mode) {
   updateTicker();
 }
 
+
+document.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
+document.addEventListener('selectstart', (event) => {
+  event.preventDefault();
+});
+
 const isTouchDevice = 'ontouchstart' in window;
 document.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleTap);
 
@@ -668,18 +677,6 @@ backToMenu.addEventListener('touchstart', (event) => {
   event.stopPropagation();
   setGameActive(false);
   showStartMenu();
-}, { passive: false });
-
-backToMenu.addEventListener('click', (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  setGameActive(false);
-});
-
-backToMenu.addEventListener('touchstart', (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  setGameActive(false);
 }, { passive: false });
 
 usernameForm.addEventListener('submit', async (event) => {

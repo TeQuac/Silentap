@@ -5,17 +5,31 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8f8f8;
-  font-family: Arial, sans-serif;
+  background: radial-gradient(circle at top, #f9fcff 0%, #f2f6fb 45%, #edf2f8 100%);
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  color: #1f2a37;
   overflow: hidden;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   height: 100vh;
   width: 100vw;
 }
 
 .hidden {
   display: none !important;
+}
+
+
+button,
+a {
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .overlay {
@@ -32,10 +46,12 @@ body {
 
 .card {
   width: min(420px, 100%);
-  background: #fff;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #dbe6f2;
+  border-radius: 18px;
   padding: 20px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 14px 34px rgba(33, 52, 74, 0.14);
+  backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -65,9 +81,10 @@ body {
   padding: 12px;
   border-radius: 10px;
   border: none;
-  background: #111;
+  background: linear-gradient(180deg, #2b4b6d 0%, #203a56 100%);
   color: #fff;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -101,7 +118,8 @@ body {
 }
 
 #mode-screen {
-  background: rgba(248, 248, 248, 0.95);
+  background: rgba(237, 244, 251, 0.84);
+  backdrop-filter: blur(2px);
   z-index: 25;
 }
 
@@ -118,31 +136,35 @@ body {
 }
 
 #username-label {
-  font-size: 22px;
-  color: #222;
-  font-weight: 700;
+  font-size: 24px;
+  color: #1f2a37;
+  font-weight: 800;
 }
 
 #user-highscore {
-  margin-top: 6px;
-  font-size: 18px;
-  color: #555;
+  margin-top: 8px;
+  font-size: 17px;
+  color: #4f6072;
 }
 
 #start-button {
-  padding: 12px 28px;
+  padding: 13px 30px;
   border: none;
   border-radius: 999px;
-  background: #111;
+  background: linear-gradient(180deg, #2b4b6d 0%, #203a56 100%);
   color: #fff;
   font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 24px rgba(32, 58, 86, 0.28);
   z-index: 20;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 }
 
 #start-button:hover {
-  background: #000;
+  transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
 #ticker-mode-label {
@@ -227,7 +249,8 @@ body {
   position: fixed;
   top: 10px;
   font-size: 18px;
-  color: #333;
+  color: #2c3e52;
+  font-weight: 600;
   z-index: 15;
 }
 
@@ -239,7 +262,7 @@ body {
   position: fixed;
   bottom: 10px;
   left: 10px;
-  background: #444;
+  background: #3f4f62;
   color: #fff;
   padding: 10px 14px;
   border: none;
@@ -257,7 +280,7 @@ body {
   position: fixed;
   bottom: 10px;
   right: 10px;
-  background: #555;
+  background: #51667f;
   color: white;
   padding: 10px;
   border-radius: 8px;
