@@ -201,6 +201,25 @@ body {
 #game-highscore { left: 50%; transform: translateX(-50%); }
 #misses { right: 10px; }
 
+
+#back-to-menu {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  background: #444;
+  color: #fff;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.88;
+  z-index: 5;
+}
+
+#back-to-menu:hover {
+  opacity: 1;
+}
+
 #donate {
   position: fixed;
   bottom: 10px;

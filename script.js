@@ -3,6 +3,7 @@ const counter = document.getElementById('counter');
 const gameHighscore = document.getElementById('game-highscore');
 const missesDisplay = document.getElementById('misses');
 const donate = document.getElementById('donate');
+const backToMenu = document.getElementById('back-to-menu');
 
 const usernameOverlay = document.getElementById('username-overlay');
 const usernameForm = document.getElementById('username-form');
@@ -53,8 +54,8 @@ const warmDotColors = [
 ];
 let currentDotColorIndex = 0;
 
-const gameElements = [dot, counter, gameHighscore, missesDisplay, donate].filter(Boolean);
-const avoidElements = [counter, gameHighscore, missesDisplay, donate].filter(Boolean);
+const gameElements = [dot, counter, gameHighscore, missesDisplay, donate, backToMenu].filter(Boolean);
+const avoidElements = [counter, gameHighscore, missesDisplay, donate, backToMenu].filter(Boolean);
 
 function loadUsers() {
   const stored = localStorage.getItem(storageKeys.users);
@@ -474,7 +475,7 @@ function handleTap(event) {
     return;
   }
 
-  if (target === donate) return;
+  if (target === donate || target === backToMenu) return;
 
   misses++;
   missesDisplay.textContent = `Misses: ${misses}/${maxMisses}`;
@@ -508,6 +509,18 @@ startButton.addEventListener('touchstart', (event) => {
   event.stopPropagation();
   if (!currentUser) return;
   setGameActive(true);
+}, { passive: false });
+
+backToMenu.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setGameActive(false);
+});
+
+backToMenu.addEventListener('touchstart', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setGameActive(false);
 }, { passive: false });
 
 usernameForm.addEventListener('submit', async (event) => {
