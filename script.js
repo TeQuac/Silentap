@@ -12,6 +12,13 @@ const usernameForm = document.getElementById('username-form');
 const usernameInput = document.getElementById('username-input');
 const usernameError = document.getElementById('username-error');
 
+const feedbackOverlay = document.getElementById('feedback-overlay');
+const feedbackButton = document.getElementById('feedback-button');
+const feedbackForm = document.getElementById('feedback-form');
+const feedbackMessage = document.getElementById('feedback-message');
+const feedbackCancel = document.getElementById('feedback-cancel');
+const feedbackError = document.getElementById('feedback-error');
+
 const startScreen = document.getElementById('start-screen');
 const startButton = document.getElementById('start-button');
 const usernameValue = document.getElementById('username-value');
@@ -34,6 +41,9 @@ const gameModes = {
   normal: { label: 'Normal' },
   split: { label: 'Split' }
 };
+
+const developerEmail = 'te.quac@web.de';
+
 
 const supabaseConfig = {
   url: 'https://lwsnfjkgremafzqbhooe.supabase.co',
@@ -305,8 +315,33 @@ async function updateCurrentUserHighscore(newScore) {
   await updateTicker();
 }
 
+function showFeedbackOverlay(message = '') {
+  feedbackOverlay.classList.remove('hidden');
+  feedbackMessage.value = '';
+  if (message) {
+    feedbackError.textContent = message;
+    feedbackError.classList.remove('hidden');
+  } else {
+    feedbackError.textContent = '';
+    feedbackError.classList.add('hidden');
+  }
+}
+
+function hideFeedbackOverlay() {
+  feedbackOverlay.classList.add('hidden');
+  feedbackError.textContent = '';
+  feedbackError.classList.add('hidden');
+}
+
+function sendFeedbackMail(message) {
+  const subject = encodeURIComponent('Silentap Feedback');
+  const body = encodeURIComponent(message.trim());
+  window.location.href = `mailto:${developerEmail}?subject=${subject}&body=${body}`;
+}
+
 function showStartMenu() {
   usernameOverlay.classList.add('hidden');
+  hideFeedbackOverlay();
   modeScreen.classList.add('hidden');
   startScreen.classList.remove('hidden');
   startButton.disabled = false;
@@ -678,6 +713,31 @@ backToMenu.addEventListener('touchstart', (event) => {
   setGameActive(false);
   showStartMenu();
 }, { passive: false });
+
+feedbackButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  showFeedbackOverlay();
+});
+
+feedbackCancel.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  hideFeedbackOverlay();
+});
+
+feedbackForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const message = feedbackMessage.value.trim();
+
+  if (message.length < 3) {
+    showFeedbackOverlay('Bitte mindestens 3 Zeichen eingeben.');
+    return;
+  }
+
+  sendFeedbackMail(message);
+  hideFeedbackOverlay();
+});
 
 usernameForm.addEventListener('submit', async (event) => {
   event.preventDefault();

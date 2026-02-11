@@ -21,6 +21,21 @@
     </form>
   </div>
 
+
+  <div id="feedback-overlay" class="overlay hidden" aria-live="polite">
+    <form id="feedback-form" class="card" novalidate>
+      <h2>Feedback senden</h2>
+      <p>Teile Lob, Kritik oder Verbesserungsvorschläge.</p>
+      <label for="feedback-message">Nachricht</label>
+      <textarea id="feedback-message" rows="6" minlength="3" maxlength="1500" placeholder="Deine Nachricht..." required></textarea>
+      <div class="feedback-actions">
+        <button id="feedback-send" type="submit">Senden</button>
+        <button id="feedback-cancel" type="button" class="secondary">Abbrechen</button>
+      </div>
+      <div id="feedback-error" class="hidden" role="alert"></div>
+    </form>
+  </div>
+
   <div id="start-screen" class="hidden">
     <header id="start-header">
       <div id="username-label"><span id="username-value"></span></div>
@@ -28,6 +43,7 @@
     </header>
 
     <button id="start-button" type="button">Start</button>
+    <button id="feedback-button" type="button">Nachricht an Entwickler</button>
 
     <div id="ticker-mode-label">Top 10 · Normal</div>
     <div id="highscore-ticker" aria-label="Top 10 Highscores">
