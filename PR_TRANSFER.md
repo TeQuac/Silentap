@@ -23,3 +23,9 @@ Fix split-mode leaderboard persistence across users + Supabase policy compatibil
 - [ ] Split-Mode mit User A gespielt
 - [ ] Zweiter User / zweites Gerät öffnet Split-Top-10 und sieht User-A-Score
 - [ ] PR mit obigem Titel/Body erstellt
+
+
+## Kompatibilität: Dark-Mode-/Forced-Color-Neutralisierung
+- Die Seite setzt explizit `meta name="color-scheme" content="light"` plus CSS `color-scheme: light;`, damit Browser-UI (Formfelder/Controls) nicht automatisch auf Dark-Darstellung umschaltet.
+- Für spielkritische Elemente (`#dot`, `#dot-split`, `#split-divider`, `body`) ist `forced-color-adjust: none;` gesetzt, damit High-Contrast- bzw. Forced-Colors-Autoanpassungen diese Kern-Elemente nicht umlackieren.
+- Falls ein Browser dennoch abdunkelt (z. B. experimentelle Flags/Erweiterungen wie Auto Dark Mode), diese Browser-Override-Funktionen für die Seite deaktivieren.

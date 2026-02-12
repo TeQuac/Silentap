@@ -2,6 +2,10 @@
    Silentap - Styles
 ---------------------------- */
 
+:root {
+  color-scheme: light;
+}
+
 html,
 body {
   height: 100%;
@@ -12,6 +16,7 @@ body {
 
 body {
   margin: 0;
+  forced-color-adjust: none;
   padding: 0;
   background: radial-gradient(circle at top, #f9fcff 0%, #f2f6fb 45%, #edf2f8 100%);
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
@@ -353,6 +358,7 @@ a {
 
 #split-divider {
   position: fixed;
+  forced-color-adjust: none;
   top: 0;
   bottom: 0;
   left: 50%;
@@ -365,6 +371,7 @@ a {
 #dot,
 #dot-split {
   width: 50px;
+  forced-color-adjust: none;
   height: 50px;
   background-color: #000;
   border-radius: 50%;
