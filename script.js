@@ -400,10 +400,42 @@ function hideFeedbackOverlay() {
   feedbackError.classList.add('hidden');
 }
 
-function sendFeedbackMail(message) {
-  const subject = encodeURIComponent('Silentap Feedback');
-  const body = encodeURIComponent(message.trim());
-  window.location.href = `mailto:${developerEmail}?subject=${subject}&body=${body}`;
+async function submitFeedbackRemote(message) {
+  if (!supabaseClient) return;
+
+  const trimmedMessage = message.trim();
+  const payload = {
+    message: trimmedMessage,
+    sender_email: developerEmail
+  };
+
+  const savePromise = supabaseClient.from('feedback_messages').insert(payload)
+    .then(({ error }) => {
+      if (error) {
+        console.warn('Feedback konnte nicht gespeichert werden:', error.message);
+      }
+    })
+    .catch((error) => {
+      console.warn('Feedback-Speicherung fehlgeschlagen:', error?.message || error);
+    });
+
+  const mailPromise = supabaseClient.functions.invoke('send-feedback-email', {
+    body: {
+      message: trimmedMessage,
+      senderEmail: developerEmail,
+      recipientEmail: developerEmail
+    }
+  })
+    .then(({ error }) => {
+      if (error) {
+        console.warn('Feedback-Mail konnte nicht gesendet werden:', error.message);
+      }
+    })
+    .catch((error) => {
+      console.warn('Feedback-Mailversand fehlgeschlagen:', error?.message || error);
+    });
+
+  await Promise.allSettled([savePromise, mailPromise]);
 }
 
 function showStartMenu() {
@@ -952,8 +984,9 @@ feedbackForm.addEventListener('submit', (event) => {
     return;
   }
 
-  sendFeedbackMail(message);
   hideFeedbackOverlay();
+  showStartMenu();
+  void submitFeedbackRemote(message);
 });
 
 authRegisterButton.addEventListener('click', () => {

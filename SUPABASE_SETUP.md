@@ -11,7 +11,8 @@ Damit werden:
 - neue Spalte `split_highscore` ergänzt,
 - RPC `submit_score_mode(...)` angelegt,
 - Trigger für `updated_at` gesetzt,
-- RLS + Policies für Lesen und initiales Erstellen sichergestellt.
+- RLS + Policies für Lesen und initiales Erstellen sichergestellt,
+- Tabelle `feedback_messages` für App-internes Feedback angelegt.
 
 
 Hinweis: Die Migration verwendet absichtlich `drop policy if exists ...` + `create policy ...`, damit sie auch auf Postgres-Versionen läuft, die `create policy if not exists` nicht unterstützen.
@@ -40,3 +41,20 @@ Für den schnellen Copy/Paste-Flow:
 3. In Supabase SQL Editor einfügen und ausführen.
 
 Tipp: Wenn bereits Daten existieren, ist das Skript idempotent ausgelegt (`if not exists`, `drop ... if exists`).
+
+## 5) Feedback aus der App
+Die Nachricht an den Entwickler wird ohne Mail-App direkt in Supabase gespeichert (`feedback_messages`).
+Dafür wird absichtlich die Empfängeradresse auch als `sender_email` verwendet, damit Nutzer keine Mailadresse eingeben müssen.
+
+
+## 6) E-Mail-Zustellung aktivieren (Edge Function)
+Damit Feedback **nicht nur gespeichert**, sondern auch an die Empfängeradresse gesendet wird:
+
+1. Supabase CLI installieren und einloggen.
+2. Secret setzen:
+   - `supabase secrets set RESEND_API_KEY=DEIN_RESEND_API_KEY`
+3. Edge Function deployen:
+   - `supabase functions deploy send-feedback-email --no-verify-jwt`
+4. In Resend sicherstellen, dass die `from`-Adresse (hier Entwickleradresse) als Sender verifiziert ist.
+
+Danach ruft die App beim Absenden zusätzlich die Function `send-feedback-email` auf und verschickt die Mail serverseitig.
