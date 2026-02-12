@@ -866,14 +866,15 @@ function handleTap(event) {
   if (!gameActive) return;
 
   const target = event.target;
+  const touchedDotElement = target?.closest?.('#dot, #dot-split');
   const isControlButton = target?.closest?.('#donate, #back-to-menu, #start-btn, #mode-back, #mode-normal, #mode-split, #feedback-btn, #feedback-cancel, #feedback-submit');
   if (isControlButton) return;
 
   const interactionPoints = getInteractionPoints(event);
 
   if (currentMode === 'split') {
-    const leftHit = interactionPoints.some((point) => isTapInsideDot(dot, point));
-    const rightHit = interactionPoints.some((point) => isTapInsideDot(dotSplit, point));
+    const leftHit = touchedDotElement === dot || interactionPoints.some((point) => isTapInsideDot(dot, point));
+    const rightHit = touchedDotElement === dotSplit || interactionPoints.some((point) => isTapInsideDot(dotSplit, point));
 
     if (leftHit && rightHit) {
       return;
@@ -900,7 +901,7 @@ function handleTap(event) {
       return;
     }
   } else {
-    const tappedDot = interactionPoints.some((point) => isTapInsideDot(dot, point));
+    const tappedDot = touchedDotElement === dot || interactionPoints.some((point) => isTapInsideDot(dot, point));
     if (tappedDot) {
       hitDot();
       return;
