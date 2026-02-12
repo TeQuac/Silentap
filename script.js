@@ -879,6 +879,8 @@ function handleTap(event) {
       return;
     } else if (leftHit || rightHit) {
       const tappedSide = leftHit ? 'left' : 'right';
+      const hasPreviousTap = Boolean(splitSequenceLastTappedSide);
+      const switchedSide = hasPreviousTap && splitSequenceLastTappedSide !== tappedSide;
 
       if (!splitSequenceLastTappedSide) {
         splitSequenceLastTappedSide = tappedSide;
