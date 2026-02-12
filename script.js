@@ -267,105 +267,192 @@ async function fetchUserRemote(name) {
 }
 
 async function createUserRemote(name, passwordHash) {
-  if (!supabaseClient) return { record: ensureUserRecordShape({ name }), passwordHash };
+  if (!supabaseClient) {
+    return {
+      record: ensureUserRecordShape({
+        name,
+        highscores: { normal: 0, split: 0 }
+      }),
+      passwordHash
+    };
+  }
 
   const { data, error } = await supabaseClient
     .from('game_scores')
-    .insert({ username: name, highscore: 0, split_highscore: 0, password_hash: passwordHash })
+    .insert({
+      username: name,
+      highscore: 0,
+      split_highscore: 0,
+      password_hash: passwordHash
+    })
     .select('username, highscore, split_highscore, password_hash')
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(error.message || 'User konnte nicht angelegt werden');
   }
 
   return shapeRemoteUser(data);
 }
 
 async function setUserPasswordRemote(name, passwordHash) {
-  if (!supabaseClient) return { record: ensureUserRecordShape({ name }), passwordHash };
+  if (!supabaseClient) {
+    return {
+      record: ensureUserRecordShape({
+        name,
+        highscores: { normal: 0, split: 0 }
+      }),
+      passwordHash
+    };
+  }
 
   const { data, error } = await supabaseClient
     .from('game_scores')
     .update({ password_hash: passwordHash })
-    .ilike('username', name)
-    .is('password_hash', null)
+    .eq('username', name)
     .select('username, highscore, split_highscore, password_hash')
-    .maybeSingle();
+    .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(error.message || 'Passwort konnte nicht gesetzt werden');
   }
 
-  if (data) return shapeRemoteUser(data);
-
-  const existing = await fetchUserRemote(name);
-  if (!existing) throw new Error('User nicht gefunden.');
-  return existing;
+  return shapeRemoteUser(data);
 }
 
-function extractPersistedScore(result, mode, fallbackScore) {
-  if (!result || typeof result !== 'object') return fallbackScore;
+async function upsertUserHighscoreRemote(name, mode, score) {
+  if (!supabaseClient) return ensureUserRecordShape({ name, highscores: { [mode]: score } });
 
-  const modeKey = mode === 'split' ? 'split_highscore' : 'highscore';
-  if (typeof result[modeKey] === 'number') return result[modeKey];
-  if (typeof result.highscore === 'number' && mode === 'normal') return result.highscore;
-  if (typeof result.split_highscore === 'number' && mode === 'split') return result.split_highscore;
-  return fallbackScore;
-}
-
-async function submitHighscoreRemote(name, score, mode) {
-  if (!supabaseClient) return score;
+  const column = mode === 'split' ? 'split_highscore' : 'highscore';
+  const payload = { username: name, [column]: score };
 
   const { data, error } = await supabaseClient
-    .rpc('submit_score_mode', { p_username: name, p_mode: mode, p_score: score });
+    .from('game_scores')
+    .upsert(payload, { onConflict: 'username' })
+    .select('username, highscore, split_highscore')
+    .single();
 
-  if (!error) {
-    if (!data) return score;
-    return extractPersistedScore(data, mode, score);
+  if (error) {
+    throw new Error(error.message || 'Highscore konnte nicht gespeichert werden');
   }
 
-  if (mode === 'normal') {
-    const legacy = await supabaseClient
-      .rpc('submit_score', { p_username: name, p_score: score });
-
-    if (!legacy.error) {
-      if (!legacy.data) return score;
-      return extractPersistedScore(legacy.data, mode, score);
-    }
-  }
-
-  console.warn('Highscore konnte nicht gespeichert werden:', error.message);
-  return score;
+  return ensureUserRecordShape({
+    name: data.username,
+    highscores: { normal: data.highscore, split: data.split_highscore }
+  });
 }
 
-async function updateTicker() {
-  const remoteTopTen = await fetchTopTenRemote();
-  if (remoteTopTen) {
-    remoteTopTen.forEach((entry) => {
-      upsertUserCache(entry.name, 'normal', getScore(entry, 'normal'));
-      upsertUserCache(entry.name, 'split', getScore(entry, 'split'));
-    });
-    renderHighscoreList(remoteTopTen, selectedHighscoreMode);
+async function submitFeedbackRemote(message) {
+  if (!supabaseClient) {
+    alert('Feedback konnte nicht gesendet werden: keine Verbindung verfügbar.');
+    return false;
+  }
+
+  const payload = {
+    user_name: currentUser?.name || 'Gast',
+    message,
+    user_agent: navigator.userAgent
+  };
+
+  const { data, error } = await supabaseClient.functions.invoke('send-feedback-email', {
+    body: payload
+  });
+
+  if (error || data?.error) {
+    console.warn('Feedback konnte nicht gesendet werden:', error?.message || data?.error);
+    alert('Feedback konnte nicht gesendet werden. Bitte versuche es später erneut.');
+    return false;
+  }
+
+  alert('Vielen Dank! Dein Feedback wurde gesendet.');
+  return true;
+}
+
+function getStoredCurrentUserName() {
+  return localStorage.getItem(storageKeys.currentUser);
+}
+
+function storeCurrentUserName(name) {
+  if (name) {
+    localStorage.setItem(storageKeys.currentUser, name);
+  } else {
+    localStorage.removeItem(storageKeys.currentUser);
+  }
+}
+
+function updateCurrentUserHighscoreDisplay() {
+  if (!currentUser) {
+    userHighscoreNormal.textContent = '0';
+    userHighscoreSplit.textContent = '0';
     return;
   }
 
-  renderHighscoreList(userCache, selectedHighscoreMode);
+  userHighscoreNormal.textContent = String(getScore(currentUser, 'normal'));
+  userHighscoreSplit.textContent = String(getScore(currentUser, 'split'));
 }
 
-function showHighscoreOverlay() {
-  selectedHighscoreMode = currentMode;
-  highscoreOverlay.classList.remove('hidden');
-  void updateTicker();
+function setCurrentUser(user) {
+  currentUser = user ? ensureUserRecordShape(user) : null;
+  usernameValue.textContent = currentUser?.name || '';
+  updateCurrentUserHighscoreDisplay();
+  storeCurrentUserName(currentUser?.name || '');
 }
 
-function hideHighscoreOverlay() {
-  highscoreOverlay.classList.add('hidden');
+async function updateCurrentUserHighscore(score) {
+  if (!currentUser) return;
+  if (!Number.isFinite(score) || score < 0) return;
+
+  const previousBest = getScore(currentUser, currentMode);
+  if (score <= previousBest) return;
+
+  currentUser.highscores[currentMode] = score;
+  upsertUserCache(currentUser.name, currentMode, score);
+  updateCurrentUserHighscoreDisplay();
+  showNewHighscoreMessage();
+
+  try {
+    const remoteUser = await upsertUserHighscoreRemote(currentUser.name, currentMode, score);
+    currentUser.highscores.normal = Math.max(getScore(currentUser, 'normal'), getScore(remoteUser, 'normal'));
+    currentUser.highscores.split = Math.max(getScore(currentUser, 'split'), getScore(remoteUser, 'split'));
+    upsertUserCache(currentUser.name, 'normal', getScore(currentUser, 'normal'));
+    upsertUserCache(currentUser.name, 'split', getScore(currentUser, 'split'));
+    updateCurrentUserHighscoreDisplay();
+  } catch (error) {
+    console.warn('Highscore konnte nicht synchronisiert werden:', error.message);
+  }
 }
 
-function setHighscoreMode(mode) {
-  selectedHighscoreMode = mode;
-  void updateTicker();
+function showGameElements() {
+  alwaysVisibleInGame.forEach((element) => {
+    element.classList.remove('hidden');
+    element.hidden = false;
+  });
+
+  const modeDots = getDotsForMode();
+  modeDots.forEach((dotElement) => {
+    dotElement.classList.remove('hidden');
+    dotElement.hidden = false;
+  });
+
+  const inactiveDots = currentMode === 'split' ? [] : [dotSplit];
+  inactiveDots.forEach((dotElement) => {
+    dotElement.classList.add('hidden');
+    dotElement.hidden = true;
+  });
+
+  splitDivider.classList.toggle('hidden', currentMode !== 'split');
+  splitDivider.hidden = currentMode !== 'split';
+}
+
+function hideGameElements() {
+  [dot, dotSplit, splitDivider, ...alwaysVisibleInGame, tryAgainMessage, missIndicator, newHighscoreDisplay].forEach((element) => {
+    element.classList.add('hidden');
+    element.hidden = true;
+  });
+}
+
+function getDotsForMode() {
+  return currentMode === 'split' ? [dot, dotSplit] : [dot];
 }
 
 function updateModeButtons() {
@@ -373,57 +460,220 @@ function updateModeButtons() {
   modeSplitButton.classList.toggle('active', currentMode === 'split');
 }
 
-function updateCurrentUserHighscoreDisplay() {
-  const record = getUserRecordFromCache(currentUser);
-  const normalScore = getScore(record, 'normal');
-  const splitScore = getScore(record, 'split');
-
-  userHighscoreNormal.textContent = String(normalScore);
-  userHighscoreSplit.textContent = String(splitScore);
+function showStartMenu() {
+  startScreen.classList.remove('hidden');
+  modeScreen.classList.add('hidden');
+  hideGameElements();
+  closeSplitHint();
+  clearPendingTimers();
+  misses = 0;
+  splitSequenceLastTappedSide = null;
+  updateSplitTargetHighlight();
+  hideMissIndicator();
+  hideTryAgainMessage();
+  hideNewHighscoreMessage();
+  updateDotColorByTaps();
 }
 
-function setCurrentUser(record) {
-  const shaped = ensureUserRecordShape(record);
-  currentUser = shaped.name;
-  localStorage.setItem(storageKeys.currentUser, shaped.name);
-
-  const cacheRecord = getUserRecordFromCache(shaped.name);
-  if (!cacheRecord) {
-    userCache.push(shaped);
-    saveUsers(userCache);
-  }
-
-  usernameValue.textContent = shaped.name;
-  updateCurrentUserHighscoreDisplay();
+function showModeScreen() {
+  startScreen.classList.add('hidden');
+  modeScreen.classList.remove('hidden');
+  closeSplitHint();
+  hideGameElements();
+  updateModeButtons();
 }
 
-async function updateCurrentUserHighscore(newScore) {
-  if (!currentUser) return;
-
-  const record = getUserRecordFromCache(currentUser);
-  const currentBest = getScore(record, currentMode);
-  if (newScore <= currentBest) return;
-
-  if (newScore === currentBest + 1) {
-    showNewHighscoreMessage();
-  }
-
-  let bestScore = newScore;
-  if (currentMode === 'normal') {
-    const persistedHighscore = await submitHighscoreRemote(currentUser, newScore, currentMode);
-    bestScore = Math.max(newScore, persistedHighscore);
-  }
-
-  if (currentMode === 'split') {
-    const persistedHighscore = await submitHighscoreRemote(currentUser, newScore, currentMode);
-    bestScore = Math.max(newScore, persistedHighscore);
-  }
-
-  upsertUserCache(currentUser, currentMode, bestScore);
-  updateCurrentUserHighscoreDisplay();
-  await updateTicker();
+function setHighscoreMode(mode) {
+  selectedHighscoreMode = mode;
+  renderHighscoreList(userCache, selectedHighscoreMode);
 }
 
+async function showHighscoreOverlay() {
+  selectedHighscoreMode = currentMode;
+  highscoreOverlay.classList.remove('hidden');
+  renderHighscoreList(userCache, selectedHighscoreMode);
+
+  const remoteTopTen = await fetchTopTenRemote();
+  if (remoteTopTen) {
+    remoteTopTen.forEach((entry) => {
+      upsertUserCache(entry.name, 'normal', getScore(entry, 'normal'));
+      upsertUserCache(entry.name, 'split', getScore(entry, 'split'));
+    });
+    renderHighscoreList(userCache, selectedHighscoreMode);
+  }
+}
+
+function hideHighscoreOverlay() {
+  highscoreOverlay.classList.add('hidden');
+}
+
+function clearAuthFields() {
+  usernameInput.value = '';
+  passwordInput.value = '';
+  passwordConfirmInput.value = '';
+}
+
+function showUsernameOverlay(options = {}) {
+  const mode = options.mode || authMode;
+  const isRegister = mode === 'register';
+  authMode = mode;
+  usernameForm.dataset.mode = mode;
+
+  authTitle.textContent = options.title || (isRegister ? 'Willkommen bei Silentap' : 'Bei Silentap anmelden');
+  authDescription.textContent = options.description || (isRegister
+    ? 'Wähle einen Usernamen und melde dich mit Passwort an.'
+    : 'Melde dich mit Username und Passwort an.');
+
+  passwordConfirmInput.classList.toggle('hidden', !isRegister);
+  passwordConfirmInput.hidden = !isRegister;
+  passwordConfirmLabel.classList.toggle('hidden', !isRegister);
+  passwordConfirmLabel.hidden = !isRegister;
+  passwordConfirmInput.required = isRegister;
+
+  authRegisterButton.classList.toggle('active', isRegister);
+  authLoginButton.classList.toggle('active', !isRegister);
+  authRegisterButton.classList.toggle('secondary', !isRegister);
+  authLoginButton.classList.toggle('secondary', isRegister);
+
+  const allowCancel = Boolean(options.allowCancel && currentUser);
+  authCancelButton.classList.toggle('hidden', !allowCancel);
+  authCancelButton.hidden = !allowCancel;
+
+  usernameError.textContent = options.message || '';
+  usernameError.classList.toggle('hidden', !options.message);
+
+  if (!options.keepValues) clearAuthFields();
+  startScreen.classList.add('hidden');
+  modeScreen.classList.add('hidden');
+  usernameOverlay.classList.remove('hidden');
+  usernameInput.focus({ preventScroll: true });
+}
+
+function hideUsernameOverlay() {
+  usernameOverlay.classList.add('hidden');
+  usernameError.textContent = '';
+  usernameError.classList.add('hidden');
+  clearAuthFields();
+}
+
+function showFeedbackOverlay(message = '') {
+  feedbackError.textContent = message;
+  feedbackError.classList.toggle('hidden', !message);
+  feedbackOverlay.classList.remove('hidden');
+  feedbackMessage.focus({ preventScroll: true });
+}
+
+function hideFeedbackOverlay() {
+  feedbackOverlay.classList.add('hidden');
+  feedbackError.textContent = '';
+  feedbackError.classList.add('hidden');
+  feedbackForm.reset();
+}
+
+function clearPendingTimers() {
+  if (missResetMoveTimeoutId) {
+    clearTimeout(missResetMoveTimeoutId);
+    missResetMoveTimeoutId = null;
+  }
+
+  if (missIndicatorTimeoutId) {
+    clearTimeout(missIndicatorTimeoutId);
+    missIndicatorTimeoutId = null;
+  }
+
+  if (newHighscoreTimeoutId) {
+    clearTimeout(newHighscoreTimeoutId);
+    newHighscoreTimeoutId = null;
+  }
+}
+
+function setGameActive(active) {
+  gameActive = active;
+  hideMissIndicator();
+  hideTryAgainMessage();
+
+  if (gameActive) {
+    startScreen.classList.add('hidden');
+    modeScreen.classList.add('hidden');
+    closeSplitHint();
+    showGameElements();
+    taps = 0;
+    misses = 0;
+    hasRoundStarted = false;
+    splitSequenceLastTappedSide = null;
+    counter.textContent = '0';
+    resetDotColors();
+    resetDots();
+    updateSplitTargetHighlight();
+    stopAllMovement();
+    void updateTicker();
+  } else {
+    clearPendingTimers();
+    stopAllMovement();
+    splitSequenceLastTappedSide = null;
+    updateSplitTargetHighlight();
+    hideNewHighscoreMessage();
+    hasRoundStarted = false;
+  }
+}
+
+async function updateTicker() {
+  if (!currentUser) {
+    counter.textContent = '0';
+    return;
+  }
+
+  const localRecord = getUserRecordFromCache(currentUser.name);
+  if (localRecord) {
+    currentUser = ensureUserRecordShape({ ...currentUser, highscores: localRecord.highscores });
+    updateCurrentUserHighscoreDisplay();
+  }
+
+  const remoteUser = await fetchUserRemote(currentUser.name);
+  if (remoteUser?.record) {
+    currentUser = ensureUserRecordShape({
+      ...currentUser,
+      highscores: {
+        normal: Math.max(getScore(currentUser, 'normal'), getScore(remoteUser.record, 'normal')),
+        split: Math.max(getScore(currentUser, 'split'), getScore(remoteUser.record, 'split'))
+      }
+    });
+
+    upsertUserCache(currentUser.name, 'normal', getScore(currentUser, 'normal'));
+    upsertUserCache(currentUser.name, 'split', getScore(currentUser, 'split'));
+    updateCurrentUserHighscoreDisplay();
+  }
+}
+
+function initUserFlow() {
+  userCache = loadUsers();
+  const storedCurrentUserName = getStoredCurrentUserName();
+
+  if (storedCurrentUserName) {
+    const cached = getUserRecordFromCache(storedCurrentUserName);
+    if (cached) {
+      setCurrentUser(cached);
+      showStartMenu();
+      void updateTicker();
+      return;
+    }
+  }
+
+  showUsernameOverlay({ mode: 'register' });
+}
+
+function showNewHighscoreMessage() {
+  newHighscoreDisplay.classList.remove('hidden');
+  newHighscoreDisplay.hidden = false;
+
+  if (newHighscoreTimeoutId) {
+    clearTimeout(newHighscoreTimeoutId);
+  }
+
+  newHighscoreTimeoutId = setTimeout(() => {
+    hideNewHighscoreMessage();
+  }, 1800);
+}
 
 function hideNewHighscoreMessage() {
   if (newHighscoreTimeoutId) {
@@ -433,242 +683,6 @@ function hideNewHighscoreMessage() {
 
   newHighscoreDisplay.classList.add('hidden');
   newHighscoreDisplay.hidden = true;
-}
-
-function showNewHighscoreMessage() {
-  if (newHighscoreTimeoutId) {
-    clearTimeout(newHighscoreTimeoutId);
-  }
-
-  newHighscoreDisplay.classList.remove('hidden');
-  newHighscoreDisplay.hidden = false;
-
-  newHighscoreTimeoutId = setTimeout(() => {
-    newHighscoreDisplay.classList.add('hidden');
-    newHighscoreDisplay.hidden = true;
-    newHighscoreTimeoutId = null;
-  }, 5000);
-}
-
-function showFeedbackOverlay(message = '') {
-  feedbackOverlay.classList.remove('hidden');
-  feedbackMessage.value = '';
-  if (message) {
-    feedbackError.textContent = message;
-    feedbackError.classList.remove('hidden');
-  } else {
-    feedbackError.textContent = '';
-    feedbackError.classList.add('hidden');
-  }
-}
-
-function hideFeedbackOverlay() {
-  feedbackOverlay.classList.add('hidden');
-  feedbackError.textContent = '';
-  feedbackError.classList.add('hidden');
-}
-
-async function submitFeedbackRemote(message) {
-  if (!supabaseClient) return;
-
-  const trimmedMessage = message.trim();
-  const payload = {
-    message: trimmedMessage,
-    sender_email: developerEmail
-  };
-
-  const savePromise = supabaseClient.from('feedback_messages').insert(payload)
-    .then(({ error }) => {
-      if (error) {
-        console.warn('Feedback konnte nicht gespeichert werden:', error.message);
-      }
-    })
-    .catch((error) => {
-      console.warn('Feedback-Speicherung fehlgeschlagen:', error?.message || error);
-    });
-
-  const mailPromise = supabaseClient.functions.invoke('send-feedback-email', {
-    body: {
-      message: trimmedMessage,
-      senderEmail: developerEmail,
-      recipientEmail: developerEmail
-    }
-  })
-    .then(({ error }) => {
-      if (error) {
-        console.warn('Feedback-Mail konnte nicht gesendet werden:', error.message);
-      }
-    })
-    .catch((error) => {
-      console.warn('Feedback-Mailversand fehlgeschlagen:', error?.message || error);
-    });
-
-  await Promise.allSettled([savePromise, mailPromise]);
-}
-
-function showStartMenu() {
-  closeSplitHint();
-  usernameOverlay.classList.add('hidden');
-  hideFeedbackOverlay();
-  modeScreen.classList.add('hidden');
-  startScreen.classList.remove('hidden');
-  hideHighscoreOverlay();
-  startButton.disabled = false;
-  updateCurrentUserHighscoreDisplay();
-  void updateTicker();
-}
-
-function showModeScreen() {
-  startScreen.classList.add('hidden');
-  modeScreen.classList.remove('hidden');
-  updateModeButtons();
-}
-
-function setAuthMode(mode, options = {}) {
-  authMode = mode;
-  const isRegister = mode === 'register';
-
-  authTitle.textContent = options.title || (isRegister ? 'Willkommen bei Silentap' : 'Bei Silentap anmelden');
-  authDescription.textContent = options.description || (isRegister
-    ? 'Wähle einen Usernamen und melde dich mit Passwort an.'
-    : 'Melde dich mit Username und Passwort an.');
-
-  authRegisterButton.classList.toggle('active', isRegister);
-  authLoginButton.classList.toggle('active', !isRegister);
-
-  usernameForm.dataset.mode = mode;
-  usernameSave.textContent = isRegister ? 'Registrieren' : 'Anmelden';
-
-  passwordConfirmInput.classList.toggle('hidden', !isRegister);
-  passwordConfirmLabel.classList.toggle('hidden', !isRegister);
-  passwordConfirmInput.required = isRegister;
-  passwordInput.autocomplete = isRegister ? 'new-password' : 'current-password';
-}
-
-function showUsernameOverlay(options = {}) {
-  const { message = '', mode = 'register', keepValues = false, allowCancel = Boolean(currentUser) } = options;
-
-  startScreen.classList.add('hidden');
-  modeScreen.classList.add('hidden');
-  usernameOverlay.classList.remove('hidden');
-
-  setAuthMode(mode, options);
-
-  authCancelButton.classList.toggle('hidden', !allowCancel);
-
-  if (!keepValues) {
-    usernameInput.value = options.username || '';
-    passwordInput.value = '';
-    passwordConfirmInput.value = '';
-  }
-
-  if (message) {
-    usernameError.textContent = message;
-    usernameError.classList.remove('hidden');
-  } else {
-    usernameError.textContent = '';
-    usernameError.classList.add('hidden');
-  }
-
-  startButton.disabled = true;
-}
-
-async function resolveSavedUser(savedUser) {
-  const remoteUser = await fetchUserRemote(savedUser);
-  if (remoteUser) {
-    upsertUserCache(remoteUser.record.name, 'normal', getScore(remoteUser.record, 'normal'));
-    upsertUserCache(remoteUser.record.name, 'split', getScore(remoteUser.record, 'split'));
-    return remoteUser;
-  }
-
-  const localRecord = getUserRecordFromCache(savedUser);
-  if (!localRecord) return null;
-  return { record: localRecord, passwordHash: null };
-}
-
-async function initUserFlow() {
-  userCache = loadUsers();
-  await updateTicker();
-
-  const savedUser = localStorage.getItem(storageKeys.currentUser);
-
-  if (!savedUser) {
-    showUsernameOverlay({ mode: 'login', allowCancel: false });
-    return;
-  }
-
-  const resolved = await resolveSavedUser(savedUser);
-  if (!resolved) {
-    showUsernameOverlay({ mode: 'login', message: 'Gespeicherter User wurde nicht gefunden. Bitte neu anmelden.' });
-    return;
-  }
-
-  if (!resolved.passwordHash) {
-    showUsernameOverlay({
-      mode: 'register',
-      username: resolved.record.name,
-      title: 'Passwort festlegen',
-      description: 'Dieser bestehende User benötigt einmalig ein Passwort für künftige Anmeldungen.',
-      message: 'Bitte Passwort festlegen.'
-    });
-    return;
-  }
-
-  setCurrentUser(resolved.record);
-  showStartMenu();
-}
-
-function getDotsForMode() {
-  return currentMode === 'split' ? [dot, dotSplit] : [dot];
-}
-
-function setGameActive(active) {
-  gameActive = active;
-  splitSequenceLastTappedSide = null;
-
-  if (missResetMoveTimeoutId) {
-    clearTimeout(missResetMoveTimeoutId);
-    missResetMoveTimeoutId = null;
-  }
-
-  hideMissIndicator();
-
-  alwaysVisibleInGame.forEach((element) => {
-    element.classList.toggle('hidden', !active);
-    element.hidden = !active;
-  });
-
-  splitDivider.classList.toggle('hidden', !active || currentMode !== 'split');
-  splitDivider.hidden = !active || currentMode !== 'split';
-
-  [dot, dotSplit].forEach((element) => {
-    const shouldShow = active && getDotsForMode().includes(element);
-    element.classList.toggle('hidden', !shouldShow);
-    element.hidden = !shouldShow;
-  });
-
-  startScreen.classList.toggle('hidden', active);
-  modeScreen.classList.toggle('hidden', true);
-
-  if (active) {
-    taps = 0;
-    misses = 0;
-    hasRoundStarted = false;
-    counter.textContent = '0';
-    hideMissIndicator();
-    hideTryAgainMessage();
-    hideNewHighscoreMessage();
-    resetDotColors();
-    resetDots();
-    updateSplitTargetHighlight();
-  } else {
-    hideNewHighscoreMessage();
-    stopAllMovement();
-    splitDivider.classList.add('hidden');
-    splitDivider.hidden = true;
-    dotSplit.classList.add('hidden');
-    dotSplit.hidden = true;
-  }
 }
 
 function updateSplitTargetHighlight() {
@@ -696,21 +710,32 @@ function getDotPosition(dotElement) {
   };
 }
 
+function getViewportSize() {
+  const viewportWidth = window.visualViewport?.width;
+  const viewportHeight = window.visualViewport?.height;
+
+  return {
+    width: Math.round(viewportWidth || document.documentElement.clientWidth || window.innerWidth || 0),
+    height: Math.round(viewportHeight || document.documentElement.clientHeight || window.innerHeight || 0)
+  };
+}
+
 function getBoundsForDot(dotElement) {
   const padding = 10;
   const dotSize = dotElement.offsetWidth;
+  const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
   if (currentMode !== 'split') {
     return {
       minX: padding,
       minY: padding,
-      maxX: Math.max(padding, window.innerWidth - dotSize - padding),
-      maxY: Math.max(padding, window.innerHeight - dotSize - padding)
+      maxX: Math.max(padding, viewportWidth - dotSize - padding),
+      maxY: Math.max(padding, viewportHeight - dotSize - padding)
     };
   }
 
   const dividerWidth = splitDivider.offsetWidth || 14;
-  const centerX = window.innerWidth / 2;
+  const centerX = viewportWidth / 2;
   const leftHalfMaxX = centerX - (dividerWidth / 2) - dotSize - padding;
   const rightHalfMinX = centerX + (dividerWidth / 2) + padding;
 
@@ -719,8 +744,8 @@ function getBoundsForDot(dotElement) {
   return {
     minX: isLeftDot ? padding : rightHalfMinX,
     minY: padding,
-    maxX: isLeftDot ? Math.max(padding, leftHalfMaxX) : Math.max(rightHalfMinX, window.innerWidth - dotSize - padding),
-    maxY: Math.max(padding, window.innerHeight - dotSize - padding)
+    maxX: isLeftDot ? Math.max(padding, leftHalfMaxX) : Math.max(rightHalfMinX, viewportWidth - dotSize - padding),
+    maxY: Math.max(padding, viewportHeight - dotSize - padding)
   };
 }
 
@@ -810,18 +835,19 @@ function moveDot(dotElement) {
 
 function getCenteredPosition(dotElement, dotIndex = 0) {
   const dotSize = dotElement.offsetWidth;
+  const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
   if (currentMode !== 'split') {
     return {
-      left: `${(window.innerWidth - dotSize) / 2}px`,
-      top: `${(window.innerHeight - dotSize) / 2}px`
+      left: `${(viewportWidth - dotSize) / 2}px`,
+      top: `${(viewportHeight - dotSize) / 2}px`
     };
   }
 
-  const quarterX = dotIndex === 0 ? window.innerWidth * 0.25 : window.innerWidth * 0.75;
+  const quarterX = dotIndex === 0 ? viewportWidth * 0.25 : viewportWidth * 0.75;
   return {
     left: `${quarterX - (dotSize / 2)}px`,
-    top: `${(window.innerHeight - dotSize) / 2}px`
+    top: `${(viewportHeight - dotSize) / 2}px`
   };
 }
 
@@ -924,9 +950,10 @@ function hideMissIndicator() {
 function showMissIndicator(point) {
   if (!point || !gameActive) return;
 
+  const { width: viewportWidth, height: viewportHeight } = getViewportSize();
   const indicatorSize = missIndicator.offsetWidth || 44;
-  const safeLeft = Math.min(Math.max(point.x - (indicatorSize / 2), 8), window.innerWidth - indicatorSize - 8);
-  const safeTop = Math.min(Math.max(point.y - (indicatorSize / 2), 8), window.innerHeight - indicatorSize - 8);
+  const safeLeft = Math.min(Math.max(point.x - (indicatorSize / 2), 8), viewportWidth - indicatorSize - 8);
+  const safeTop = Math.min(Math.max(point.y - (indicatorSize / 2), 8), viewportHeight - indicatorSize - 8);
 
   missIndicator.style.left = `${safeLeft}px`;
   missIndicator.style.top = `${safeTop}px`;
@@ -962,6 +989,7 @@ function positionTryAgainMessage() {
   const primaryDot = getPrimaryDotForTryAgain();
   if (!primaryDot) return;
 
+  const { width: viewportWidth } = getViewportSize();
   const dotRect = primaryDot.getBoundingClientRect();
   const messageWidth = tryAgainMessage.offsetWidth || 110;
   const messageHeight = tryAgainMessage.offsetHeight || 34;
@@ -970,7 +998,7 @@ function positionTryAgainMessage() {
   const desiredLeft = centerX - (messageWidth / 2);
   const desiredTop = dotRect.top - messageHeight - 10;
 
-  const left = Math.min(Math.max(desiredLeft, 8), window.innerWidth - messageWidth - 8);
+  const left = Math.min(Math.max(desiredLeft, 8), viewportWidth - messageWidth - 8);
   const top = Math.max(desiredTop, 8);
 
   tryAgainMessage.style.left = `${left}px`;
@@ -1102,10 +1130,19 @@ document.addEventListener('wheel', (event) => {
   event.preventDefault();
 }, { passive: false });
 
-const isTouchDevice = 'ontouchstart' in window;
-document.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleTap);
+const handlePrimaryPointerDown = (event) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  handleTap(event);
+};
 
-window.addEventListener('resize', () => {
+if (window.PointerEvent) {
+  document.addEventListener('pointerdown', handlePrimaryPointerDown);
+} else {
+  const isTouchDevice = 'ontouchstart' in window;
+  document.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleTap);
+}
+
+function syncGameLayoutToViewport() {
   if (gameActive) {
     resetDots();
     if (hasRoundStarted) {
@@ -1116,7 +1153,16 @@ window.addEventListener('resize', () => {
       positionTryAgainMessage();
     }
   }
+}
+
+window.addEventListener('resize', syncGameLayoutToViewport);
+window.addEventListener('orientationchange', () => {
+  requestAnimationFrame(syncGameLayoutToViewport);
 });
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncGameLayoutToViewport);
+}
 
 startButton.addEventListener('click', (event) => {
   event.preventDefault();
