@@ -89,6 +89,7 @@ const movementStates = new Map();
 const warmDotColors = [
   '#1f2937', '#8b5e3c', '#a05d4e', '#b66a50', '#c9785a', '#d08a62', '#9f7a57', '#c17f59', '#b5835a', '#7a5c4a', '#94624e'
 ];
+const resetVibrationPattern = [30, 40, 30];
 let currentDotColorIndex = 0;
 
 const alwaysVisibleInGame = [counter, gameHighscore, missesDisplay, donate, backToMenu];
@@ -868,6 +869,11 @@ function isTapInsideDot(dotElement, point) {
   return Math.hypot(deltaX, deltaY) <= radius;
 }
 
+function triggerResetHaptic() {
+  if (!navigator?.vibrate) return;
+  navigator.vibrate(resetVibrationPattern);
+}
+
 function handleTap(event) {
   if (!gameActive) return;
 
@@ -920,6 +926,7 @@ function handleTap(event) {
   if (misses >= maxMisses) {
     taps = 0;
     misses = 0;
+    triggerResetHaptic();
     splitSequenceLastTappedSide = null;
     counter.textContent = 'Taps: 0';
     missesDisplay.textContent = `Misses: 0/${maxMisses}`;
