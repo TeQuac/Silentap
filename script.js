@@ -82,9 +82,11 @@ let selectedHighscoreMode = 'normal';
 let authMode = 'register';
 let splitSequenceLastTappedSide = null;
 let missResetMoveTimeoutId = null;
+let hasRoundStarted = false;
 
 const movementAnimations = new Map();
 const movementStates = new Map();
+const maxDotVelocity = 4.8;
 
 const warmDotColors = [
   '#1f2937', '#8b5e3c', '#a05d4e', '#b66a50', '#c9785a', '#d08a62', '#9f7a57', '#c17f59', '#b5835a', '#7a5c4a', '#94624e'
@@ -616,13 +618,13 @@ function setGameActive(active) {
   if (active) {
     taps = 0;
     misses = 0;
+    hasRoundStarted = false;
     counter.textContent = 'Taps: 0';
     missesDisplay.textContent = `Misses: 0/${maxMisses}`;
     gameHighscore.textContent = `Highscore (${gameModes[currentMode].label}): ${getScore(getUserRecordFromCache(currentUser), currentMode)}`;
     resetDotColors();
     resetDots();
     updateSplitTargetHighlight();
-    getDotsForMode().forEach((dotElement) => moveDot(dotElement));
   } else {
     stopAllMovement();
     splitDivider.classList.add('hidden');
@@ -705,7 +707,7 @@ function startMovement(dotElement, previousPosition, nextPosition) {
 
     const bounds = getBoundsForDot(dotElement);
 
-    movementState.velocity = Math.min(movementState.velocity + 0.04, 8);
+    movementState.velocity = Math.min(movementState.velocity + 0.04, maxDotVelocity);
     movementState.position.left += movementState.direction.x * movementState.velocity;
     movementState.position.top += movementState.direction.y * movementState.velocity;
 
@@ -821,6 +823,7 @@ function resetDotColors() {
 }
 
 function hitDot() {
+  hasRoundStarted = true;
   taps++;
   counter.textContent = `Taps: ${taps}`;
   updateDotColorByTaps();
@@ -932,17 +935,14 @@ function handleTap(event) {
     missesDisplay.textContent = `Misses: 0/${maxMisses}`;
     resetDotColors();
     resetDots();
+    hasRoundStarted = false;
     updateSplitTargetHighlight();
 
     if (missResetMoveTimeoutId) {
       clearTimeout(missResetMoveTimeoutId);
     }
 
-    missResetMoveTimeoutId = window.setTimeout(() => {
-      if (!gameActive) return;
-      getDotsForMode().forEach((dotElement) => moveDot(dotElement));
-      missResetMoveTimeoutId = null;
-    }, 450);
+    missResetMoveTimeoutId = null;
   }
 }
 
@@ -988,7 +988,9 @@ document.addEventListener(isTouchDevice ? 'touchstart' : 'click', handleTap);
 window.addEventListener('resize', () => {
   if (gameActive) {
     resetDots();
-    getDotsForMode().forEach((dotElement) => moveDot(dotElement));
+    if (hasRoundStarted) {
+      getDotsForMode().forEach((dotElement) => moveDot(dotElement));
+    }
   }
 });
 
