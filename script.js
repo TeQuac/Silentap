@@ -3,7 +3,8 @@ const dotSplit = document.getElementById('dot-split');
 const splitDivider = document.getElementById('split-divider');
 const counter = document.getElementById('counter');
 const newHighscoreDisplay = document.getElementById('new-highscore');
-const missesDisplay = document.getElementById('misses');
+const missIndicator = document.getElementById('miss-indicator');
+const tryAgainMessage = document.getElementById('try-again');
 const donate = document.getElementById('donate');
 const backToMenu = document.getElementById('back-to-menu');
 
@@ -82,6 +83,7 @@ let selectedHighscoreMode = 'normal';
 let authMode = 'register';
 let splitSequenceLastTappedSide = null;
 let missResetMoveTimeoutId = null;
+let missIndicatorTimeoutId = null;
 let hasRoundStarted = false;
 let newHighscoreTimeoutId = null;
 
@@ -96,8 +98,8 @@ const resetVibrationPattern = [30, 40, 30];
 const resetVibrationDuration = 40;
 let currentDotColorIndex = 0;
 
-const alwaysVisibleInGame = [counter, missesDisplay, donate, backToMenu];
-const avoidElements = [counter, newHighscoreDisplay, missesDisplay, donate, backToMenu];
+const alwaysVisibleInGame = [counter, donate, backToMenu];
+const avoidElements = [counter, newHighscoreDisplay, tryAgainMessage, donate, backToMenu];
 
 function ensureUserRecordShape(user) {
   const highscores = {
@@ -629,6 +631,8 @@ function setGameActive(active) {
     missResetMoveTimeoutId = null;
   }
 
+  hideMissIndicator();
+
   alwaysVisibleInGame.forEach((element) => {
     element.classList.toggle('hidden', !active);
     element.hidden = !active;
@@ -651,7 +655,8 @@ function setGameActive(active) {
     misses = 0;
     hasRoundStarted = false;
     counter.textContent = '0';
-    missesDisplay.textContent = `Misses: 0/${maxMisses}`;
+    hideMissIndicator();
+    hideTryAgainMessage();
     hideNewHighscoreMessage();
     resetDotColors();
     resetDots();
@@ -855,6 +860,7 @@ function resetDotColors() {
 }
 
 function hitDot() {
+  hideTryAgainMessage();
   hasRoundStarted = true;
   taps++;
   counter.textContent = String(taps);
@@ -904,6 +910,67 @@ function isTapInsideDot(dotElement, point) {
   return Math.hypot(deltaX, deltaY) <= radius;
 }
 
+
+function hideMissIndicator() {
+  if (missIndicatorTimeoutId) {
+    clearTimeout(missIndicatorTimeoutId);
+    missIndicatorTimeoutId = null;
+  }
+
+  missIndicator.classList.add('hidden');
+  missIndicator.hidden = true;
+}
+
+function showMissIndicator(point) {
+  if (!point || !gameActive) return;
+
+  const indicatorSize = missIndicator.offsetWidth || 44;
+  const safeLeft = Math.min(Math.max(point.x - (indicatorSize / 2), 8), window.innerWidth - indicatorSize - 8);
+  const safeTop = Math.min(Math.max(point.y - (indicatorSize / 2), 8), window.innerHeight - indicatorSize - 8);
+
+  missIndicator.style.left = `${safeLeft}px`;
+  missIndicator.style.top = `${safeTop}px`;
+  missIndicator.classList.remove('hidden');
+  missIndicator.hidden = false;
+
+  if (missIndicatorTimeoutId) {
+    clearTimeout(missIndicatorTimeoutId);
+  }
+
+  missIndicatorTimeoutId = setTimeout(() => {
+    missIndicatorTimeoutId = null;
+    hideMissIndicator();
+  }, 320);
+}
+
+function hideTryAgainMessage() {
+  tryAgainMessage.classList.add('hidden');
+  tryAgainMessage.hidden = true;
+}
+
+function positionTryAgainMessage() {
+  const primaryDot = dot;
+  const dotRect = primaryDot.getBoundingClientRect();
+  const messageWidth = tryAgainMessage.offsetWidth || 110;
+  const messageHeight = tryAgainMessage.offsetHeight || 34;
+
+  const centerX = dotRect.left + (dotRect.width / 2);
+  const desiredLeft = centerX - (messageWidth / 2);
+  const desiredTop = dotRect.top - messageHeight - 10;
+
+  const left = Math.min(Math.max(desiredLeft, 8), window.innerWidth - messageWidth - 8);
+  const top = Math.max(desiredTop, 8);
+
+  tryAgainMessage.style.left = `${left}px`;
+  tryAgainMessage.style.top = `${top}px`;
+}
+
+function showTryAgainMessage() {
+  tryAgainMessage.classList.remove('hidden');
+  tryAgainMessage.hidden = false;
+  positionTryAgainMessage();
+}
+
 function triggerResetHaptic() {
   const vibrate = navigator?.vibrate?.bind(navigator);
   if (!vibrate) return false;
@@ -934,9 +1001,6 @@ function handleTap(event) {
       return;
     } else if (leftHit || rightHit) {
       const tappedSide = leftHit ? 'left' : 'right';
-      const hasPreviousTap = Boolean(splitSequenceLastTappedSide);
-      const switchedSide = hasPreviousTap && splitSequenceLastTappedSide !== tappedSide;
-
       if (!splitSequenceLastTappedSide) {
         splitSequenceLastTappedSide = tappedSide;
         updateSplitTargetHighlight();
@@ -963,7 +1027,7 @@ function handleTap(event) {
   }
 
   misses++;
-  missesDisplay.textContent = `Misses: ${misses}/${maxMisses}`;
+  showMissIndicator(interactionPoints[0]);
 
   if (misses >= maxMisses) {
     taps = 0;
@@ -971,7 +1035,8 @@ function handleTap(event) {
     triggerResetHaptic();
     splitSequenceLastTappedSide = null;
     counter.textContent = '0';
-    missesDisplay.textContent = `Misses: 0/${maxMisses}`;
+    hideMissIndicator();
+    showTryAgainMessage();
     resetDotColors();
     resetDots();
     hasRoundStarted = false;
@@ -1030,6 +1095,10 @@ window.addEventListener('resize', () => {
     resetDots();
     if (hasRoundStarted) {
       getDotsForMode().forEach((dotElement) => moveDot(dotElement));
+    }
+
+    if (!tryAgainMessage.hidden && !tryAgainMessage.classList.contains('hidden')) {
+      positionTryAgainMessage();
     }
   }
 });
