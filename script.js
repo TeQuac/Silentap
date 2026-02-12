@@ -882,14 +882,21 @@ function handleTap(event) {
       const hasPreviousTap = Boolean(splitSequenceLastTappedSide);
       const switchedSide = hasPreviousTap && splitSequenceLastTappedSide !== tappedSide;
 
-      splitSequenceLastTappedSide = tappedSide;
-      updateSplitTargetHighlight();
-
-      if (switchedSide) {
-        hitDot();
+      if (!splitSequenceLastTappedSide) {
+        splitSequenceLastTappedSide = tappedSide;
+        updateSplitTargetHighlight();
         return;
       }
 
+      if (splitSequenceLastTappedSide !== tappedSide) {
+        hitDot();
+        splitSequenceLastTappedSide = null;
+        updateSplitTargetHighlight();
+        return;
+      }
+
+      splitSequenceLastTappedSide = tappedSide;
+      updateSplitTargetHighlight();
       return;
     }
   } else {
