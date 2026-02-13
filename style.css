@@ -292,12 +292,13 @@ a {
 
 .highscore-mode-selector {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 #highscore-mode-normal,
 #highscore-mode-split,
+#highscore-mode-pressure,
 #highscore-close {
   padding: 12px;
   border-radius: 10px;
@@ -315,7 +316,8 @@ a {
 }
 
 #highscore-mode-normal.active,
-#highscore-mode-split.active {
+#highscore-mode-split.active,
+#highscore-mode-pressure.active {
   outline: 2px solid #d6ae76;
 }
 

@@ -35,10 +35,12 @@ const switchUserButton = document.getElementById('switch-user-button');
 const usernameValue = document.getElementById('username-value');
 const userHighscoreNormal = document.getElementById('user-highscore-normal');
 const userHighscoreSplit = document.getElementById('user-highscore-split');
+const userHighscorePressure = document.getElementById('user-highscore-pressure');
 const highscoreButton = document.getElementById('highscore-button');
 const highscoreOverlay = document.getElementById('highscore-overlay');
 const highscoreModeNormalButton = document.getElementById('highscore-mode-normal');
 const highscoreModeSplitButton = document.getElementById('highscore-mode-split');
+const highscoreModePressureButton = document.getElementById('highscore-mode-pressure');
 const highscoreList = document.getElementById('highscore-list');
 const highscoreEmpty = document.getElementById('highscore-empty');
 const highscoreCloseButton = document.getElementById('highscore-close');
@@ -112,7 +114,8 @@ const pressureModeClasses = ['pressure-tension-low', 'pressure-tension-medium', 
 function ensureUserRecordShape(user) {
   const highscores = {
     normal: Number.isFinite(user?.highscores?.normal) ? user.highscores.normal : Number.isFinite(user?.highscore) ? user.highscore : 0,
-    split: Number.isFinite(user?.highscores?.split) ? user.highscores.split : 0
+    split: Number.isFinite(user?.highscores?.split) ? user.highscores.split : 0,
+    pressure: Number.isFinite(user?.highscores?.pressure) ? user.highscores.pressure : Number.isFinite(user?.pressure_highscore) ? user.pressure_highscore : 0
   };
 
   return {
@@ -157,7 +160,7 @@ function upsertUserCache(name, mode, score) {
   }
 
   if (!existing.highscores) {
-    existing.highscores = { normal: 0, split: 0 };
+    existing.highscores = { normal: 0, split: 0, pressure: 0 };
   }
 
   existing.highscores[mode] = Math.max(getScore(existing, mode), score);
@@ -176,8 +179,10 @@ function renderHighscoreList(users, mode) {
   const entries = getTopTenEntries(users, mode);
   highscoreModeNormalButton.classList.toggle('active', mode === 'normal');
   highscoreModeSplitButton.classList.toggle('active', mode === 'split');
+  highscoreModePressureButton.classList.toggle('active', mode === 'pressure');
   highscoreModeNormalButton.setAttribute('aria-selected', String(mode === 'normal'));
   highscoreModeSplitButton.setAttribute('aria-selected', String(mode === 'split'));
+  highscoreModePressureButton.setAttribute('aria-selected', String(mode === 'pressure'));
 
   highscoreList.innerHTML = '';
   if (entries.length === 0) {
@@ -211,11 +216,11 @@ function renderHighscoreList(users, mode) {
 async function fetchTopTenRemote() {
   if (!supabaseClient) return null;
 
-  const scoreColumn = currentMode === 'split' ? 'split_highscore' : 'highscore';
+  const scoreColumn = selectedHighscoreMode === 'split' ? 'split_highscore' : selectedHighscoreMode === 'pressure' ? 'pressure_highscore' : 'highscore';
 
   const { data, error } = await supabaseClient
     .from('game_scores')
-    .select('username, highscore, split_highscore')
+    .select('username, highscore, split_highscore, pressure_highscore')
     .order(scoreColumn, { ascending: false })
     .order('updated_at', { ascending: true })
     .limit(10);
@@ -227,7 +232,7 @@ async function fetchTopTenRemote() {
 
   return (data || []).map((entry) => ensureUserRecordShape({
     name: entry.username,
-    highscores: { normal: entry.highscore, split: entry.split_highscore }
+    highscores: { normal: entry.highscore, split: entry.split_highscore, pressure: entry.pressure_highscore }
   }));
 }
 
@@ -250,7 +255,7 @@ function shapeRemoteUser(entry) {
   return {
     record: ensureUserRecordShape({
       name: entry.username,
-      highscores: { normal: entry.highscore, split: entry.split_highscore }
+      highscores: { normal: entry.highscore, split: entry.split_highscore, pressure: entry.pressure_highscore }
     }),
     passwordHash: entry.password_hash || null
   };
@@ -261,7 +266,7 @@ async function fetchUserRemote(name) {
 
   const { data, error } = await supabaseClient
     .from('game_scores')
-    .select('username, highscore, split_highscore, password_hash')
+    .select('username, highscore, split_highscore, pressure_highscore, password_hash')
     .ilike('username', name)
     .limit(1)
     .maybeSingle();
@@ -279,7 +284,7 @@ async function createUserRemote(name, passwordHash) {
     return {
       record: ensureUserRecordShape({
         name,
-        highscores: { normal: 0, split: 0 }
+        highscores: { normal: 0, split: 0, pressure: 0 }
       }),
       passwordHash
     };
@@ -291,9 +296,10 @@ async function createUserRemote(name, passwordHash) {
       username: name,
       highscore: 0,
       split_highscore: 0,
+      pressure_highscore: 0,
       password_hash: passwordHash
     })
-    .select('username, highscore, split_highscore, password_hash')
+    .select('username, highscore, split_highscore, pressure_highscore, password_hash')
     .single();
 
   if (error) {
@@ -308,7 +314,7 @@ async function setUserPasswordRemote(name, passwordHash) {
     return {
       record: ensureUserRecordShape({
         name,
-        highscores: { normal: 0, split: 0 }
+        highscores: { normal: 0, split: 0, pressure: 0 }
       }),
       passwordHash
     };
@@ -318,7 +324,7 @@ async function setUserPasswordRemote(name, passwordHash) {
     .from('game_scores')
     .update({ password_hash: passwordHash })
     .eq('username', name)
-    .select('username, highscore, split_highscore, password_hash')
+    .select('username, highscore, split_highscore, pressure_highscore, password_hash')
     .single();
 
   if (error) {
@@ -331,13 +337,13 @@ async function setUserPasswordRemote(name, passwordHash) {
 async function upsertUserHighscoreRemote(name, mode, score) {
   if (!supabaseClient) return ensureUserRecordShape({ name, highscores: { [mode]: score } });
 
-  const column = mode === 'split' ? 'split_highscore' : 'highscore';
+  const column = mode === 'split' ? 'split_highscore' : mode === 'pressure' ? 'pressure_highscore' : 'highscore';
   const payload = { username: name, [column]: score };
 
   const { data, error } = await supabaseClient
     .from('game_scores')
     .upsert(payload, { onConflict: 'username' })
-    .select('username, highscore, split_highscore')
+    .select('username, highscore, split_highscore, pressure_highscore')
     .single();
 
   if (error) {
@@ -346,7 +352,7 @@ async function upsertUserHighscoreRemote(name, mode, score) {
 
   return ensureUserRecordShape({
     name: data.username,
-    highscores: { normal: data.highscore, split: data.split_highscore }
+    highscores: { normal: data.highscore, split: data.split_highscore, pressure: data.pressure_highscore }
   });
 }
 
@@ -392,11 +398,13 @@ function updateCurrentUserHighscoreDisplay() {
   if (!currentUser) {
     userHighscoreNormal.textContent = '0';
     userHighscoreSplit.textContent = '0';
+    userHighscorePressure.textContent = '0';
     return;
   }
 
   userHighscoreNormal.textContent = String(getScore(currentUser, 'normal'));
   userHighscoreSplit.textContent = String(getScore(currentUser, 'split'));
+  userHighscorePressure.textContent = String(getScore(currentUser, 'pressure'));
 }
 
 function setCurrentUser(user) {
@@ -423,8 +431,10 @@ async function updateCurrentUserHighscore(score) {
     const remoteUser = await upsertUserHighscoreRemote(currentUser.name, currentMode, score);
     currentUser.highscores.normal = Math.max(getScore(currentUser, 'normal'), getScore(remoteUser, 'normal'));
     currentUser.highscores.split = Math.max(getScore(currentUser, 'split'), getScore(remoteUser, 'split'));
+    currentUser.highscores.pressure = Math.max(getScore(currentUser, 'pressure'), getScore(remoteUser, 'pressure'));
     upsertUserCache(currentUser.name, 'normal', getScore(currentUser, 'normal'));
     upsertUserCache(currentUser.name, 'split', getScore(currentUser, 'split'));
+    upsertUserCache(currentUser.name, 'pressure', getScore(currentUser, 'pressure'));
     updateCurrentUserHighscoreDisplay();
   } catch (error) {
     console.warn('Highscore konnte nicht synchronisiert werden:', error.message);
@@ -654,12 +664,14 @@ async function updateTicker() {
       ...currentUser,
       highscores: {
         normal: Math.max(getScore(currentUser, 'normal'), getScore(remoteUser.record, 'normal')),
-        split: Math.max(getScore(currentUser, 'split'), getScore(remoteUser.record, 'split'))
+        split: Math.max(getScore(currentUser, 'split'), getScore(remoteUser.record, 'split')),
+        pressure: Math.max(getScore(currentUser, 'pressure'), getScore(remoteUser.record, 'pressure'))
       }
     });
 
     upsertUserCache(currentUser.name, 'normal', getScore(currentUser, 'normal'));
     upsertUserCache(currentUser.name, 'split', getScore(currentUser, 'split'));
+    upsertUserCache(currentUser.name, 'pressure', getScore(currentUser, 'pressure'));
     updateCurrentUserHighscoreDisplay();
   }
 }
@@ -1321,6 +1333,12 @@ highscoreModeNormalButton.addEventListener('click', async (event) => {
 highscoreModeSplitButton.addEventListener('click', async (event) => {
   event.preventDefault();
   setHighscoreMode('split');
+  await showHighscoreOverlay();
+});
+
+highscoreModePressureButton.addEventListener('click', async (event) => {
+  event.preventDefault();
+  setHighscoreMode('pressure');
   await showHighscoreOverlay();
 });
 
