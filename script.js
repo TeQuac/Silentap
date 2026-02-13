@@ -417,7 +417,6 @@ function setCurrentUser(user) {
 async function updateCurrentUserHighscore(score) {
   if (!currentUser) return;
   if (!Number.isFinite(score) || score < 0) return;
-  if (isPressureMode()) return;
 
   const previousBest = getScore(currentUser, currentMode);
   if (score <= previousBest) return;
