@@ -23,6 +23,14 @@ const authRegisterButton = document.getElementById('auth-register');
 const authLoginButton = document.getElementById('auth-login');
 
 const feedbackOverlay = document.getElementById('feedback-overlay');
+const settingsOverlay = document.getElementById('settings-overlay');
+const settingsButton = document.getElementById('settings-button');
+const settingsCloseButton = document.getElementById('settings-close');
+const settingsLanguageButton = document.getElementById('settings-language-button');
+const settingsLanguageLabel = document.getElementById('settings-language-label');
+const userHighscoreNormalLabel = document.getElementById('user-highscore-normal-label');
+const userHighscoreSplitLabel = document.getElementById('user-highscore-split-label');
+const userHighscorePressureLabel = document.getElementById('user-highscore-pressure-label');
 const feedbackButton = document.getElementById('feedback-button');
 const feedbackForm = document.getElementById('feedback-form');
 const feedbackMessage = document.getElementById('feedback-message');
@@ -57,16 +65,193 @@ const pressureHintCloseButton = document.getElementById('pressure-hint-close');
 
 const storageKeys = {
   users: 'silentapUsers',
-  currentUser: 'silentapCurrentUser'
+  currentUser: 'silentapCurrentUser',
+  language: 'silentapLanguage'
 };
 
 const gameModes = {
-  normal: { label: 'Normal' },
-  split: { label: 'Split' },
-  pressure: { label: 'Druck' }
+  normal: { labelKey: 'modeNormal' },
+  split: { labelKey: 'modeSplit' },
+  pressure: { labelKey: 'modePressure' }
 };
 
 const developerEmail = 'te.quac@web.de';
+
+
+const supportedLanguages = ['de', 'en', 'ru', 'tr', 'zh'];
+const languageNames = {
+  de: 'Deutsch',
+  en: 'English',
+  ru: 'Русский',
+  tr: 'Türkçe',
+  zh: '中文'
+};
+
+const translations = {
+  de: {
+    authWelcome: 'Willkommen bei Silentap', authLoginTitle: 'Bei Silentap anmelden',
+    authRegisterDescription: 'Wähle einen Usernamen und melde dich mit Passwort an.', authLoginDescription: 'Melde dich mit Username und Passwort an.',
+    newUser: 'Neuer User', login: 'Anmelden', username: 'Username', usernamePlaceholder: 'Min. 3 Zeichen', password: 'Passwort', passwordPlaceholder: 'Mind. 4 Zeichen',
+    passwordConfirm: 'Passwort wiederholen', passwordConfirmPlaceholder: 'Passwort wiederholen', save: 'Speichern', cancel: 'Abbrechen',
+    feedbackTitle: 'Feedback senden', feedbackDescription: 'Teile Lob, Kritik oder Verbesserungsvorschläge.', message: 'Nachricht', feedbackPlaceholder: 'Deine Nachricht...', send: 'Senden',
+    start: 'Start', switchUser: 'Anderen User anmelden', settingsTitle: 'Einstellungen', settingsOpen: 'Einstellungen öffnen', settingsClose: 'Schließen',
+    settingsLanguageLabel: 'Sprache: {language}', settingsLanguageButton: 'Sprache ändern', feedbackToDev: 'Nachricht an Entwickler',
+    highscoreAria: 'Top-10-Highscores öffnen', highscoreTitle: 'Top 10 Highscores', highscoreModesAria: 'Spielmodi für Highscores',
+    noHighscores: 'Noch keine Highscores vorhanden.', noModeHighscores: 'Noch keine {mode}-Highscores vorhanden.', close: 'Schließen',
+    splitHintTitle: 'Split-Modus Wertung', splitHintText: 'Ein Punkt zählt nur, wenn beide Punkte nacheinander getroffen werden – Reihenfolge egal.',
+    splitCounts: '✅ zählt', splitNoCount: '❌ zählt nicht', understood: 'Verstanden',
+    modeChoose: 'Spielmodus wählen', modeDescription: 'Normal: Ein Punkt über das ganze Feld.\nSplit: Zwei Hälften mit Mittelbalken und je ein Punkt pro Seite.\nDruck: Wie Normal, aber jeder Punkt muss in 5 Sekunden getroffen werden.',
+    back: 'Zurück', pressureHintTitle: 'Druck-Modus', pressureHintText1: 'Du spielst wie im Normal-Modus, aber jeder Punkt hat nur 5 Sekunden Lebenszeit.', pressureHintText2: 'Mit jeder Sekunde wird der Punkt nervöser und zittert stärker. Triff ihn rechtzeitig – sonst explodiert er!',
+    letsGo: "Los geht's", newHighscore: 'Neuer Highscore!', tryAgain: 'Nochmal!', backToMenu: '← Startmenü', support: '☕️ Support',
+    alertFeedbackOffline: 'Feedback konnte nicht gesendet werden: keine Verbindung verfügbar.', alertFeedbackError: 'Feedback konnte nicht gesendet werden. Bitte versuche es später erneut.', alertFeedbackSent: 'Vielen Dank! Dein Feedback wurde gesendet.',
+    errFeedbackMinLength: 'Bitte mindestens 3 Zeichen eingeben.', errUsernameMin: 'Username muss mindestens 3 Zeichen lang sein.', errPasswordMin: 'Passwort muss mindestens 4 Zeichen lang sein.', errPasswordMismatch: 'Passwörter stimmen nicht überein.', errUsernameTaken: 'Dieser Username ist bereits vergeben.', errUserSave: 'User konnte nicht gespeichert werden. Bitte versuche es erneut.', errUserNotFound: 'User nicht gefunden. Bitte registrieren.', errPasswordWrong: 'Passwort ist nicht korrekt.', errLoginFailed: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+    modeNormal: 'Normal', modeSplit: 'Split', modePressure: 'Druck', modePressureLabel: 'Druck'
+  },
+  en: {
+    authWelcome: 'Welcome to Silentap', authLoginTitle: 'Sign in to Silentap', authRegisterDescription: 'Choose a username and sign in with a password.', authLoginDescription: 'Sign in with username and password.',
+    newUser: 'New user', login: 'Sign in', username: 'Username', usernamePlaceholder: 'Min. 3 characters', password: 'Password', passwordPlaceholder: 'Min. 4 characters', passwordConfirm: 'Repeat password', passwordConfirmPlaceholder: 'Repeat password', save: 'Save', cancel: 'Cancel',
+    feedbackTitle: 'Send feedback', feedbackDescription: 'Share praise, criticism or suggestions.', message: 'Message', feedbackPlaceholder: 'Your message...', send: 'Send',
+    start: 'Start', switchUser: 'Sign in as another user', settingsTitle: 'Settings', settingsOpen: 'Open settings', settingsClose: 'Close', settingsLanguageLabel: 'Language: {language}', settingsLanguageButton: 'Change language', feedbackToDev: 'Message to developer',
+    highscoreAria: 'Open top-10 highscores', highscoreTitle: 'Top 10 highscores', highscoreModesAria: 'Game modes for highscores', noHighscores: 'No highscores yet.', noModeHighscores: 'No {mode} highscores yet.', close: 'Close',
+    splitHintTitle: 'Split mode scoring', splitHintText: 'A point only counts if both dots are hit consecutively – order does not matter.', splitCounts: '✅ counts', splitNoCount: '❌ does not count', understood: 'Understood',
+    modeChoose: 'Choose game mode', modeDescription: 'Normal: One dot on the full field.\nSplit: Two halves with middle bar and one dot per side.\nPressure: Like Normal, but each dot must be hit within 5 seconds.', back: 'Back', pressureHintTitle: 'Pressure mode', pressureHintText1: 'You play like in Normal mode, but each dot only lives for 5 seconds.', pressureHintText2: 'With every second the dot gets more nervous and shakes harder. Hit it in time – otherwise it explodes!', letsGo: "Let's go", newHighscore: 'New highscore!', tryAgain: 'Try again!', backToMenu: '← Start menu', support: '☕️ Support', userHighscoreLine: 'Normal: {normal} | Split: {split} | Pressure: {pressure}',
+    alertFeedbackOffline: 'Feedback could not be sent: no connection available.', alertFeedbackError: 'Feedback could not be sent. Please try again later.', alertFeedbackSent: 'Thank you! Your feedback has been sent.',
+    errFeedbackMinLength: 'Please enter at least 3 characters.', errUsernameMin: 'Username must be at least 3 characters long.', errPasswordMin: 'Password must be at least 4 characters long.', errPasswordMismatch: 'Passwords do not match.', errUsernameTaken: 'This username is already taken.', errUserSave: 'User could not be saved. Please try again.', errUserNotFound: 'User not found. Please register.', errPasswordWrong: 'Password is incorrect.', errLoginFailed: 'Login failed. Please try again.', modeNormal: 'Normal', modeSplit: 'Split', modePressure: 'Pressure', modePressureLabel: 'Pressure'
+  }
+};
+
+let currentLanguage = localStorage.getItem(storageKeys.language) || 'de';
+if (!supportedLanguages.includes(currentLanguage)) currentLanguage = 'de';
+let translationCache = {};
+
+function template(text, vars = {}) {
+  return text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
+}
+
+async function translateTextSmart(sourceText, targetLang) {
+  const cacheKey = `${targetLang}:${sourceText}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
+
+  if (supportedLanguages.includes(targetLang)) {
+    const sourceLang = 'de';
+    try {
+      const response = await fetch('https://translate.argosopentech.com/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: sourceText, source: sourceLang, target: targetLang, format: 'text' })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.translatedText) {
+          translationCache[cacheKey] = data.translatedText;
+          return data.translatedText;
+        }
+      }
+    } catch {
+      return sourceText;
+    }
+  }
+
+  return sourceText;
+}
+
+function t(key, vars = {}) {
+  const dictionary = translations[currentLanguage] || translations.de;
+  const base = dictionary[key] || translations.de[key] || key;
+  return template(base, vars);
+}
+
+async function ensureLanguageDictionary(language) {
+  if (language === 'de' || translations[language]) return;
+  translations[language] = {};
+  for (const [key, value] of Object.entries(translations.de)) {
+    translations[language][key] = await translateTextSmart(value, language);
+  }
+}
+
+async function setLanguage(language) {
+  if (!supportedLanguages.includes(language)) return;
+  await ensureLanguageDictionary(language);
+  currentLanguage = language;
+  localStorage.setItem(storageKeys.language, language);
+  applyTranslations();
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+
+  authRegisterButton.textContent = t('newUser');
+  authLoginButton.textContent = t('login');
+  document.querySelector('label[for="username-input"]').textContent = t('username');
+  document.querySelector('label[for="password-input"]').textContent = t('password');
+  passwordConfirmLabel.textContent = t('passwordConfirm');
+  usernameInput.placeholder = t('usernamePlaceholder');
+  passwordInput.placeholder = t('passwordPlaceholder');
+  passwordConfirmInput.placeholder = t('passwordConfirmPlaceholder');
+  usernameSave.textContent = t('save');
+  authCancelButton.textContent = t('cancel');
+
+  document.querySelector('#feedback-form h2').textContent = t('feedbackTitle');
+  document.querySelector('#feedback-form p').textContent = t('feedbackDescription');
+  document.querySelector('label[for="feedback-message"]').textContent = t('message');
+  feedbackMessage.placeholder = t('feedbackPlaceholder');
+  document.getElementById('feedback-send').textContent = t('send');
+  feedbackCancel.textContent = t('cancel');
+
+  startButton.textContent = t('start');
+  switchUserButton.textContent = t('switchUser');
+  settingsButton.setAttribute('aria-label', t('settingsOpen'));
+  highscoreButton.setAttribute('aria-label', t('highscoreAria'));
+
+  document.getElementById('settings-title').textContent = t('settingsTitle');
+  settingsLanguageLabel.textContent = t('settingsLanguageLabel', { language: languageNames[currentLanguage] || currentLanguage });
+  settingsLanguageButton.textContent = t('settingsLanguageButton');
+  feedbackButton.textContent = t('feedbackToDev');
+  settingsCloseButton.textContent = t('settingsClose');
+
+  document.getElementById('highscore-title').textContent = t('highscoreTitle');
+  document.querySelector('.highscore-mode-selector').setAttribute('aria-label', t('highscoreModesAria'));
+  highscoreModeNormalButton.textContent = t('modeNormal');
+  highscoreModeSplitButton.textContent = t('modeSplit');
+  highscoreModePressureButton.textContent = t('modePressureLabel');
+  highscoreCloseButton.textContent = t('close');
+
+  document.getElementById('split-hint-title').textContent = t('splitHintTitle');
+  document.querySelector('#split-hint-overlay p').textContent = t('splitHintText');
+  document.querySelector('.hint-row.success .hint-label').textContent = t('splitCounts');
+  document.querySelector('.hint-row.fail .hint-label').textContent = t('splitNoCount');
+  splitHintCloseButton.textContent = t('understood');
+
+  document.querySelector('#mode-screen h2').textContent = t('modeChoose');
+  document.querySelector('#mode-screen p').innerHTML = t('modeDescription').replace(/\n/g, '<br>');
+  modeNormalButton.textContent = t('modeNormal');
+  modeSplitButton.textContent = t('modeSplit');
+  modePressureButton.textContent = t('modePressureLabel');
+  modeBackButton.textContent = t('back');
+
+  document.getElementById('pressure-hint-title').textContent = t('pressureHintTitle');
+  const pressureParagraphs = document.querySelectorAll('#pressure-hint-overlay p');
+  pressureParagraphs[0].textContent = t('pressureHintText1');
+  pressureParagraphs[1].textContent = t('pressureHintText2');
+  pressureHintCloseButton.textContent = t('letsGo');
+
+  newHighscoreDisplay.textContent = t('newHighscore');
+  tryAgainMessage.textContent = t('tryAgain');
+  backToMenu.textContent = t('backToMenu');
+  donate.textContent = t('support');
+
+  userHighscoreNormalLabel.textContent = `${t('modeNormal')}:`;
+  userHighscoreSplitLabel.textContent = `${t('modeSplit')}:`;
+  userHighscorePressureLabel.textContent = `${t('modePressureLabel')}:`;
+
+  authTitle.textContent = authMode === 'register' ? t('authWelcome') : t('authLoginTitle');
+  authDescription.textContent = authMode === 'register' ? t('authRegisterDescription') : t('authLoginDescription');
+
+  updateCurrentUserHighscoreDisplay();
+  if (!highscoreEmpty.classList.contains('hidden')) {
+    highscoreEmpty.textContent = t('noHighscores');
+  }
+}
 
 
 const supabaseConfig = {
@@ -189,7 +374,7 @@ function renderHighscoreList(users, mode) {
 
   highscoreList.innerHTML = '';
   if (entries.length === 0) {
-    highscoreEmpty.textContent = `Noch keine ${gameModes[mode].label}-Highscores vorhanden.`;
+    highscoreEmpty.textContent = t('noModeHighscores', { mode: t(gameModes[mode].labelKey) });
     highscoreEmpty.classList.remove('hidden');
     return;
   }
@@ -365,7 +550,7 @@ async function upsertUserHighscoreRemote(name, mode, score) {
 
 async function submitFeedbackRemote(message) {
   if (!supabaseClient) {
-    alert('Feedback konnte nicht gesendet werden: keine Verbindung verfügbar.');
+    alert(t('alertFeedbackOffline'));
     return false;
   }
 
@@ -381,11 +566,11 @@ async function submitFeedbackRemote(message) {
 
   if (error || data?.error) {
     console.warn('Feedback konnte nicht gesendet werden:', error?.message || data?.error);
-    alert('Feedback konnte nicht gesendet werden. Bitte versuche es später erneut.');
+    alert(t('alertFeedbackError'));
     return false;
   }
 
-  alert('Vielen Dank! Dein Feedback wurde gesendet.');
+  alert(t('alertFeedbackSent'));
   return true;
 }
 
@@ -402,17 +587,15 @@ function storeCurrentUserName(name) {
 }
 
 function updateCurrentUserHighscoreDisplay() {
-  if (!currentUser) {
-    userHighscoreNormal.textContent = '0';
-    userHighscoreSplit.textContent = '0';
-    userHighscorePressure.textContent = '0';
-    return;
-  }
+  const normalScore = currentUser ? String(getScore(currentUser, 'normal')) : '0';
+  const splitScore = currentUser ? String(getScore(currentUser, 'split')) : '0';
+  const pressureScore = currentUser ? String(getScore(currentUser, 'pressure')) : '0';
 
-  userHighscoreNormal.textContent = String(getScore(currentUser, 'normal'));
-  userHighscoreSplit.textContent = String(getScore(currentUser, 'split'));
-  userHighscorePressure.textContent = String(getScore(currentUser, 'pressure'));
+  userHighscoreNormal.textContent = normalScore;
+  userHighscoreSplit.textContent = splitScore;
+  userHighscorePressure.textContent = pressureScore;
 }
+
 
 function setCurrentUser(user) {
   currentUser = user ? ensureUserRecordShape(user) : null;
@@ -547,10 +730,10 @@ function showUsernameOverlay(options = {}) {
   authMode = mode;
   usernameForm.dataset.mode = mode;
 
-  authTitle.textContent = options.title || (isRegister ? 'Willkommen bei Silentap' : 'Bei Silentap anmelden');
+  authTitle.textContent = options.title || (isRegister ? t('authWelcome') : t('authLoginTitle'));
   authDescription.textContent = options.description || (isRegister
-    ? 'Wähle einen Usernamen und melde dich mit Passwort an.'
-    : 'Melde dich mit Username und Passwort an.');
+    ? t('authRegisterDescription')
+    : t('authLoginDescription'));
 
   passwordConfirmInput.classList.toggle('hidden', !isRegister);
   passwordConfirmInput.hidden = !isRegister;
@@ -596,6 +779,20 @@ function hideFeedbackOverlay() {
   feedbackError.textContent = '';
   feedbackError.classList.add('hidden');
   feedbackForm.reset();
+}
+
+function showSettingsOverlay() {
+  settingsOverlay.classList.remove('hidden');
+}
+
+function hideSettingsOverlay() {
+  settingsOverlay.classList.add('hidden');
+}
+
+async function cycleLanguage() {
+  const index = supportedLanguages.indexOf(currentLanguage);
+  const nextLanguage = supportedLanguages[(index + 1) % supportedLanguages.length];
+  await setLanguage(nextLanguage);
 }
 
 function clearPendingTimers() {
@@ -1488,9 +1685,34 @@ backToMenu.addEventListener('touchstart', (event) => {
   showStartMenu();
 }, { passive: false });
 
+settingsButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  showSettingsOverlay();
+});
+
+settingsCloseButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  hideSettingsOverlay();
+});
+
+settingsOverlay.addEventListener('click', (event) => {
+  if (event.target === settingsOverlay) {
+    hideSettingsOverlay();
+  }
+});
+
+settingsLanguageButton.addEventListener('click', async (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  await cycleLanguage();
+});
+
 feedbackButton.addEventListener('click', (event) => {
   event.preventDefault();
   event.stopPropagation();
+  hideSettingsOverlay();
   showFeedbackOverlay();
 });
 
@@ -1505,7 +1727,7 @@ feedbackForm.addEventListener('submit', (event) => {
   const message = feedbackMessage.value.trim();
 
   if (message.length < 3) {
-    showFeedbackOverlay('Bitte mindestens 3 Zeichen eingeben.');
+    showFeedbackOverlay(t('errFeedbackMinLength'));
     return;
   }
 
@@ -1544,12 +1766,12 @@ usernameForm.addEventListener('submit', async (event) => {
   const mode = usernameForm.dataset.mode || authMode;
 
   if (name.length < 3) {
-    showUsernameOverlay({ mode, message: 'Username muss mindestens 3 Zeichen lang sein.', keepValues: true });
+    showUsernameOverlay({ mode, message: t('errUsernameMin'), keepValues: true });
     return;
   }
 
   if (password.length < 4) {
-    showUsernameOverlay({ mode, message: 'Passwort muss mindestens 4 Zeichen lang sein.', keepValues: true });
+    showUsernameOverlay({ mode, message: t('errPasswordMin'), keepValues: true });
     return;
   }
 
@@ -1557,13 +1779,13 @@ usernameForm.addEventListener('submit', async (event) => {
 
   if (mode === 'register') {
     if (password !== confirmPassword) {
-      showUsernameOverlay({ mode, message: 'Passwörter stimmen nicht überein.', keepValues: true });
+      showUsernameOverlay({ mode, message: t('errPasswordMismatch'), keepValues: true });
       return;
     }
 
     const remoteUser = await fetchUserRemote(name);
     if (remoteUser?.passwordHash) {
-      showUsernameOverlay({ mode, message: 'Dieser Username ist bereits vergeben.', keepValues: true });
+      showUsernameOverlay({ mode, message: t('errUsernameTaken'), keepValues: true });
       return;
     }
 
@@ -1579,7 +1801,7 @@ usernameForm.addEventListener('submit', async (event) => {
       await updateTicker();
       showStartMenu();
     } catch {
-      showUsernameOverlay({ mode, message: 'User konnte nicht gespeichert werden. Bitte versuche es erneut.', keepValues: true });
+      showUsernameOverlay({ mode, message: t('errUserSave'), keepValues: true });
     }
 
     return;
@@ -1587,7 +1809,7 @@ usernameForm.addEventListener('submit', async (event) => {
 
   const remoteUser = await fetchUserRemote(name);
   if (!remoteUser) {
-    showUsernameOverlay({ mode, message: 'User nicht gefunden. Bitte registrieren.', keepValues: true });
+    showUsernameOverlay({ mode, message: t('errUserNotFound'), keepValues: true });
     return;
   }
 
@@ -1596,7 +1818,7 @@ usernameForm.addEventListener('submit', async (event) => {
     if (!remoteUser.passwordHash) {
       authUser = await setUserPasswordRemote(name, passwordHash);
     } else if (remoteUser.passwordHash !== passwordHash) {
-      showUsernameOverlay({ mode, message: 'Passwort ist nicht korrekt.', keepValues: true });
+      showUsernameOverlay({ mode, message: t('errPasswordWrong'), keepValues: true });
       return;
     }
 
@@ -1607,9 +1829,10 @@ usernameForm.addEventListener('submit', async (event) => {
     await updateTicker();
     showStartMenu();
   } catch {
-    showUsernameOverlay({ mode, message: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.', keepValues: true });
+    showUsernameOverlay({ mode, message: t('errLoginFailed'), keepValues: true });
   }
 });
 
 setGameActive(false);
+applyTranslations();
 initUserFlow();
