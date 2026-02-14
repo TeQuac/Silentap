@@ -99,8 +99,8 @@ const movementAnimations = new Map();
 const movementStates = new Map();
 const maxDotVelocity = 4.8;
 const pressureModeTimeLimitMs = 5000;
-const movementInsetRatioX = 0.08;
-const movementInsetRatioY = 0.06;
+const movementInsetRatioX = 0;
+const movementInsetRatioY = 0;
 const teleportRangeRatio = 0.55;
 
 const warmDotColors = [
@@ -765,33 +765,23 @@ function getVisibleRect(element) {
   return rect;
 }
 
-function getVerticalSafeLimits(dotSize, viewportHeight, padding) {
-  const topRects = [counter, newHighscoreDisplay, tryAgainMessage]
-    .map(getVisibleRect)
-    .filter(Boolean);
-  const bottomRects = [donate, backToMenu]
-    .map(getVisibleRect)
-    .filter(Boolean);
+function overlapsRect(rectA, rectB) {
+  return !(
+    rectA.right <= rectB.left ||
+    rectA.left >= rectB.right ||
+    rectA.bottom <= rectB.top ||
+    rectA.top >= rectB.bottom
+  );
+}
 
-  const highestTopBoundary = topRects.length
-    ? Math.max(...topRects.map((rect) => rect.bottom)) + padding
-    : padding;
-  const lowestBottomBoundary = bottomRects.length
-    ? Math.min(...bottomRects.map((rect) => rect.top)) - dotSize - padding
-    : viewportHeight - dotSize - padding;
-
-  return {
-    minY: Math.max(padding, highestTopBoundary),
-    maxY: Math.max(padding, Math.min(viewportHeight - dotSize - padding, lowestBottomBoundary))
-  };
+function getBlockingRects() {
+  return avoidElements.map(getVisibleRect).filter(Boolean);
 }
 
 function getBoundsForDot(dotElement) {
   const padding = 10;
   const dotSize = dotElement.offsetWidth;
   const { width: viewportWidth, height: viewportHeight } = getViewportSize();
-  const safeVerticalLimits = getVerticalSafeLimits(dotSize, viewportHeight, padding);
-
   const applyMovementInsets = (rawBounds) => {
     const horizontalRange = Math.max(0, rawBounds.maxX - rawBounds.minX);
     const verticalRange = Math.max(0, rawBounds.maxY - rawBounds.minY);
@@ -809,9 +799,9 @@ function getBoundsForDot(dotElement) {
   if (currentMode !== 'split') {
     return applyMovementInsets({
       minX: padding,
-      minY: safeVerticalLimits.minY,
+      minY: padding,
       maxX: Math.max(padding, viewportWidth - dotSize - padding),
-      maxY: Math.max(safeVerticalLimits.minY, safeVerticalLimits.maxY)
+      maxY: Math.max(padding, viewportHeight - dotSize - padding)
     });
   }
 
@@ -824,9 +814,9 @@ function getBoundsForDot(dotElement) {
 
   return applyMovementInsets({
     minX: isLeftDot ? padding : rightHalfMinX,
-    minY: safeVerticalLimits.minY,
+    minY: padding,
     maxX: isLeftDot ? Math.max(padding, leftHalfMaxX) : Math.max(rightHalfMinX, viewportWidth - dotSize - padding),
-    maxY: Math.max(safeVerticalLimits.minY, safeVerticalLimits.maxY)
+    maxY: Math.max(padding, viewportHeight - dotSize - padding)
   });
 }
 
@@ -851,6 +841,8 @@ function startMovement(dotElement, previousPosition, nextPosition) {
     const bounds = getBoundsForDot(dotElement);
 
     movementState.velocity = Math.min(movementState.velocity + 0.04, maxDotVelocity);
+
+    const previousPosition = { ...movementState.position };
     movementState.position.left += movementState.direction.x * movementState.velocity;
     movementState.position.top += movementState.direction.y * movementState.velocity;
 
@@ -863,6 +855,62 @@ function startMovement(dotElement, previousPosition, nextPosition) {
       movementState.position.top = Math.min(Math.max(movementState.position.top, bounds.minY), bounds.maxY);
       movementState.direction.y *= -1;
     }
+
+    const dotRect = {
+      left: movementState.position.left,
+      right: movementState.position.left + dotElement.offsetWidth,
+      top: movementState.position.top,
+      bottom: movementState.position.top + dotElement.offsetHeight
+    };
+    const previousDotRect = {
+      left: previousPosition.left,
+      right: previousPosition.left + dotElement.offsetWidth,
+      top: previousPosition.top,
+      bottom: previousPosition.top + dotElement.offsetHeight
+    };
+
+    getBlockingRects().forEach((blockRect) => {
+      if (!overlapsRect(dotRect, blockRect)) return;
+
+      if (previousDotRect.right <= blockRect.left) {
+        movementState.position.left = blockRect.left - dotElement.offsetWidth;
+        movementState.direction.x = -Math.abs(movementState.direction.x);
+      } else if (previousDotRect.left >= blockRect.right) {
+        movementState.position.left = blockRect.right;
+        movementState.direction.x = Math.abs(movementState.direction.x);
+      } else if (previousDotRect.bottom <= blockRect.top) {
+        movementState.position.top = blockRect.top - dotElement.offsetHeight;
+        movementState.direction.y = -Math.abs(movementState.direction.y);
+      } else if (previousDotRect.top >= blockRect.bottom) {
+        movementState.position.top = blockRect.bottom;
+        movementState.direction.y = Math.abs(movementState.direction.y);
+      } else {
+        const pushLeft = Math.abs(dotRect.right - blockRect.left);
+        const pushRight = Math.abs(blockRect.right - dotRect.left);
+        const pushTop = Math.abs(dotRect.bottom - blockRect.top);
+        const pushBottom = Math.abs(blockRect.bottom - dotRect.top);
+        const minOverlap = Math.min(pushLeft, pushRight, pushTop, pushBottom);
+
+        if (minOverlap === pushLeft) {
+          movementState.position.left = blockRect.left - dotElement.offsetWidth;
+          movementState.direction.x = -Math.abs(movementState.direction.x);
+        } else if (minOverlap === pushRight) {
+          movementState.position.left = blockRect.right;
+          movementState.direction.x = Math.abs(movementState.direction.x);
+        } else if (minOverlap === pushTop) {
+          movementState.position.top = blockRect.top - dotElement.offsetHeight;
+          movementState.direction.y = -Math.abs(movementState.direction.y);
+        } else {
+          movementState.position.top = blockRect.bottom;
+          movementState.direction.y = Math.abs(movementState.direction.y);
+        }
+      }
+
+      dotRect.left = movementState.position.left;
+      dotRect.right = movementState.position.left + dotElement.offsetWidth;
+      dotRect.top = movementState.position.top;
+      dotRect.bottom = movementState.position.top + dotElement.offsetHeight;
+    });
 
     dotElement.style.left = `${movementState.position.left}px`;
     dotElement.style.top = `${movementState.position.top}px`;
@@ -877,20 +925,13 @@ function startMovement(dotElement, previousPosition, nextPosition) {
 }
 
 function moveDot(dotElement) {
-  const avoidRects = avoidElements.map((element) => element.getBoundingClientRect());
+  const avoidRects = getBlockingRects();
   const dotSize = dotElement.offsetWidth;
   const bounds = getBoundsForDot(dotElement);
 
   const previousPosition = getDotPosition(dotElement);
   let newX = previousPosition.left;
   let newY = previousPosition.top;
-
-  const overlapsRect = (rectA, rectB) => !(
-    rectA.right < rectB.left ||
-    rectA.left > rectB.right ||
-    rectA.bottom < rectB.top ||
-    rectA.top > rectB.bottom
-  );
 
   for (let attempt = 0; attempt < 25; attempt++) {
     const candidateX = Math.random() * (bounds.maxX - bounds.minX) + bounds.minX;
