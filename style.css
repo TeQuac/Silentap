@@ -203,6 +203,25 @@ a {
   filter: brightness(1.03);
 }
 
+
+#settings-button {
+  position: absolute;
+  top: 16px;
+  right: 78px;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid #b9c9dc;
+  background: linear-gradient(180deg, #ffffff 0%, #e6edf6 100%);
+  box-shadow: 0 8px 18px rgba(42, 69, 100, 0.18);
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 22;
+}
+
+#settings-button:hover {
+  filter: brightness(1.03);
+}
 #mode-screen {
   background: rgba(237, 244, 251, 0.84);
   backdrop-filter: blur(2px);
@@ -253,7 +272,10 @@ a {
   filter: brightness(1.04);
 }
 
-#switch-user-button {
+#switch-user-button,
+#settings-language-button,
+#feedback-button,
+#settings-close {
   margin-top: 10px;
   padding: 10px 18px;
   border-radius: 999px;
@@ -265,23 +287,10 @@ a {
   cursor: pointer;
 }
 
-#switch-user-button:hover {
-  background: #ffffff;
-}
-
-#feedback-button {
-  margin-top: 10px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid #b9c9dc;
-  background: rgba(255, 255, 255, 0.85);
-  color: #2c4663;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#feedback-button:hover {
+#switch-user-button:hover,
+#settings-language-button:hover,
+#feedback-button:hover,
+#settings-close:hover {
   background: #ffffff;
 }
 
