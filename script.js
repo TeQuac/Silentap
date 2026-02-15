@@ -339,7 +339,9 @@ function applyTranslations() {
 
   newHighscoreDisplay.textContent = t('newHighscore');
   tryAgainMessage.textContent = t('tryAgain');
-  backToMenu.textContent = t('backToMenu');
+  backToMenu.textContent = '←';
+  backToMenu.setAttribute('aria-label', t('backToMenu'));
+  backToMenu.setAttribute('title', t('backToMenu'));
   donate.textContent = '☕️';
   donate.setAttribute('aria-label', t('support'));
   donate.setAttribute('title', t('support'));
@@ -1140,7 +1142,7 @@ function getBlockingRects() {
 }
 
 function getBoundsForDot(dotElement) {
-  const padding = 0;
+  const padding = 10;
   const dotSize = dotElement.offsetWidth;
   const { width: viewportWidth, height: viewportHeight } = getViewportSize();
   const applyMovementInsets = (rawBounds) => {
