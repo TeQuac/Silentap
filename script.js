@@ -567,6 +567,7 @@ const blackholeBaseSuction = 1;
 const blackholeSuctionIncreasePerTap = 0.05;
 const blackholeCaptureDistanceFactor = 0.42;
 let blackholeSuctionMultiplier = blackholeBaseSuction;
+let blackholeCaptureInProgress = false;
 
 function ensureUserRecordShape(user) {
   const highscores = {
@@ -1518,6 +1519,8 @@ function moveDotBlackhole(dotElement) {
     velocityY
   });
 
+  blackholeCaptureInProgress = false;
+
   const animate = () => {
     const movementState = movementStates.get(dotElement);
     if (!movementState || !gameActive || !isBlackholeMode()) return;
@@ -1532,7 +1535,9 @@ function moveDotBlackhole(dotElement) {
     const normalizedX = directionX / distance;
     const normalizedY = directionY / distance;
     const suction = blackholeSuctionMultiplier;
-    const acceleration = Math.min(0.34, 0.022 * suction + 0.008);
+    const acceleration = blackholeCaptureInProgress
+      ? Math.min(0.54, 0.04 * suction + 0.04)
+      : Math.min(0.34, 0.022 * suction + 0.008);
 
     movementState.velocityX += normalizedX * acceleration;
     movementState.velocityY += normalizedY * acceleration;
@@ -1551,7 +1556,15 @@ function moveDotBlackhole(dotElement) {
     dotElement.style.top = `${movementState.position.top}px`;
 
     const captureDistance = holeCenter.radius * blackholeCaptureDistanceFactor;
-    if (distance <= captureDistance) {
+    if (!blackholeCaptureInProgress && distance <= captureDistance) {
+      blackholeCaptureInProgress = true;
+    }
+
+    if (blackholeCaptureInProgress && distance <= 6) {
+      movementState.position.left = holeCenter.x - (dotSize / 2);
+      movementState.position.top = holeCenter.y - (dotSize / 2);
+      dotElement.style.left = `${movementState.position.left}px`;
+      dotElement.style.top = `${movementState.position.top}px`;
       resetRoundToCenterWithTryAgain();
       return;
     }
@@ -1690,6 +1703,7 @@ function resetRoundToCenterWithTryAgain() {
   hideNewHighscoreMessage();
   updateSplitTargetHighlight();
   blackholeSuctionMultiplier = blackholeBaseSuction;
+  blackholeCaptureInProgress = false;
 
   if (isPressureMode() && gameActive) {
     startPressureModeTimer();
@@ -1907,6 +1921,13 @@ function isElementVisible(element) {
   return Boolean(element) && !element.hidden && !element.classList.contains('hidden');
 }
 
+function isPointInsideBlackhole(point) {
+  if (!point || !isBlackholeMode()) return false;
+
+  const hole = getBlackholeCenter();
+  return Math.hypot(point.x - hole.x, point.y - hole.y) <= hole.radius;
+}
+
 function isGameplayOverlayOpen() {
   return [splitHintOverlay, pressureHintOverlay, blackholeHintOverlay, highscoreOverlay, settingsOverlay, feedbackOverlay, usernameOverlay]
     .some((overlayElement) => isElementVisible(overlayElement));
@@ -1949,11 +1970,20 @@ function handleTap(event) {
       return;
     }
   } else {
-    const tappedDot = touchedDotElement === dot || interactionPoints.some((point) => isTapInsideDot(dot, point));
+    const tappedDot = !blackholeCaptureInProgress
+      && (touchedDotElement === dot || interactionPoints.some((point) => isTapInsideDot(dot, point)));
     if (tappedDot) {
       hitDot();
       return;
     }
+  }
+
+  if (isBlackholeMode()) {
+    const tappedBlackhole = blackholeCaptureInProgress && interactionPoints.some((point) => isPointInsideBlackhole(point));
+    if (tappedBlackhole) {
+      showMissIndicator(interactionPoints[0]);
+    }
+    return;
   }
 
   misses++;
