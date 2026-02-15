@@ -1505,14 +1505,23 @@ function isTapInsideDot(dotElement, point) {
   if (!point) return false;
 
   const rect = dotElement.getBoundingClientRect();
-  const centerX = rect.left + (rect.width / 2);
-  const centerY = rect.top + (rect.height / 2);
-  const radius = rect.width / 2;
+  const tolerance = Math.max(2, Math.round(Math.min(rect.width, rect.height) * 0.06));
 
-  const deltaX = point.x - centerX;
-  const deltaY = point.y - centerY;
+  const candidatePoints = [point];
+  if (window.visualViewport) {
+    const { offsetLeft, offsetTop, scale } = window.visualViewport;
+    candidatePoints.push(
+      { x: point.x + offsetLeft, y: point.y + offsetTop },
+      { x: (point.x / scale) + offsetLeft, y: (point.y / scale) + offsetTop }
+    );
+  }
 
-  return Math.hypot(deltaX, deltaY) <= radius;
+  return candidatePoints.some((candidate) => (
+    candidate.x >= rect.left - tolerance
+      && candidate.x <= rect.right + tolerance
+      && candidate.y >= rect.top - tolerance
+      && candidate.y <= rect.bottom + tolerance
+  ));
 }
 
 
